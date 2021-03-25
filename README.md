@@ -42,7 +42,7 @@ my %properties = (
 ```
 
 ## Case studies and examples
-TBD.
+[Click here for case studies and examples](case-studies.md)
 
 ## Corresponding author
 Ricardo M. Czekster -- rczekster at gmail com
