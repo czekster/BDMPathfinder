@@ -30,17 +30,17 @@ You may use [Visual Figaro](https://sourceforge.net/projects/visualfigaro/) to o
        - then generating the FIGARO0 file and replacing this string by something else more close to your original selected pattern (e.g. "123.456")
 3. Convert the BDMP model to a FIGARO file: Open model, on tab 'Processing', click "Generate Figaro0"
    - change the directory to save the model to the same path as BDMPathfinder is located, click "save", click "instantiate"
-4. Edit a properties file (we shipped one called 'bdmp-properties.txt') -- see "Properties" below
+4. Edit a properties file (we shipped one called ``bdmp-properties.txt``) -- see "Properties" below
    - change parameters and paths as you see fit
-5. Edit the hash variable %parameters in the Perl script 'bdmp-scenario-builder.pl'
+5. Edit the hash variable ``%parameters`` in the Perl script ``bdmp-scenario-builder.pl``
    - change the string you set in RSMB with all the variations you wish to run (e.g. '123.456' => "1;3;10;15" in hours, it will divide by 3600)
-6. Run perl bdmp-scenario-builder.pl <MODEL>
+6. Run ``perl bdmp-scenario-builder.pl <MODEL>``
    - the model must be a FIGARO model (extension .fi)
    - this will create a folder (with the timestamp), copy this folder and paste on the next step
-   - this script will also create a file called ''
-7. Run perl bdmp-run-all.pl <FOLDER> <PROPERTY-FILE>
-   - in the end, it will create a file called 'script.R', for plotting ALL scenarios
-8. Open RStudio, and then go to <FOLDER> and open the 'script.R', executing all commands
+   - this script will also create a file called ``scenarios.txt`` with all scenarios it has created
+7. Run ``perl bdmp-run-all.pl <FOLDER> <PROPERTY-FILE>``
+   - in the end, it will create a file called ``script.R``, for plotting ALL scenarios
+8. Open RStudio, and then go to <FOLDER> and open the ``script.R``, executing all commands
 
 ## Process overview
 The tool executes a Perl script and calls YAMS as a Command Line Interface (CLI).
