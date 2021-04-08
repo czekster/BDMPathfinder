@@ -22,7 +22,7 @@ You may use [Visual Figaro](https://sourceforge.net/projects/visualfigaro/) to o
 
 ## Basic instructions
 1. Create a BDMP model in RiskSpectrum ModelBuilder (RSMB)
-   - open the properties and set option: GLOBAL_TYPE>OPTIONS>enable_detection to FALSE
+   - open the properties and set option: ``GLOBAL_TYPE>OPTIONS>enable_detection`` to ``FALSE`` (this option is used when modelling only the attacks on BDMP instead of the Attack-Defense capabilities and extra parameters required in these kinds of analysis)
 2. For each leaf, assign a number that is unique to your analysis (e.g. 123.456)
    - the idea is that the script will substitute this string by a set of parameters
    - assign 'unique' values in the BDMP model in RSMB
