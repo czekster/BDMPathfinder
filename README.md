@@ -13,16 +13,34 @@ BDMPathfinder runs (and was extensively tested) on MS-Windows.
 
 You may use [Visual Figaro](https://sourceforge.net/projects/visualfigaro/) to open and work with FIGARO files using jEdit.
 
-## Details and execution
-In RSMB, after creating and testing (basic simulation within the tool) the BDMP model, analysts must instantiate the FIGARO file that is the INPUT of BDMPathfinder.
-To do this, go to the "Processing" tab, then "Instantiate Figaro 0", then "Generate Figaro 0".
-**Choose the same folder as BDMPathfinder script is located**.
-Then, to execute the script, open a ``command.exe`` and:
-1. Test whether Perl is working: ``perl -v``
-2. Call ``perl bdmpathfinder.pl case-study1.fi
-- It will create an R script called ``case-study1.R``
-3. Open RStudio, then open the .R script (hit ``Ctrl-A`` then hit ``Alt+Enter`` to execute all the script).
-- It will generate a plot with all the path probabilities or the TOP N if the property `TOP-PATHS` is different than 0.
+## Features
+- Multiple scenario analysis of BDMP models;
+- Advanced plotting using the R environment;
+- Top Path analysis, where modellers select only the ones having highest probabilities;
+- Iteration over multiple mission times set by the modeller (ie analysis over time as paths increase their likelihood);
+- Customisation of plotting axis (X,Y);
+
+## Basic instructions
+1. Create a BDMP model in RiskSpectrum ModelBuilder (RSMB)
+   - open the properties and set option: GLOBAL_TYPE>OPTIONS>enable_detection to FALSE
+2. For each leaf, assign a number that is unique to your analysis (e.g. 123.456)
+   - the idea is that the script will substitute this string by a set of parameters
+   - assign 'unique' values in the BDMP model in RSMB
+   - for ISE leaves you will have to add values between 0 and 1, so I suggest adding 0.011010101, for instance
+       - then generating the FIGARO0 file and replacing this string by something else more close to your original selected pattern (e.g. "123.456")
+3. Convert the BDMP model to a FIGARO file: Open model, on tab 'Processing', click "Generate Figaro0"
+   - change the directory to save the model to the same path as BDMPathfinder is located, click "save", click "instantiate"
+4. Edit a properties file (we shipped one called 'bdmp-properties.txt') -- see "Properties" below
+   - change parameters and paths as you see fit
+5. Edit the hash variable %parameters in the Perl script 'bdmp-scenario-builder.pl'
+   - change the string you set in RSMB with all the variations you wish to run (e.g. '123.456' => "1;3;10;15" in hours, it will divide by 3600)
+6. Run perl bdmp-scenario-builder.pl <MODEL>
+   - the model must be a FIGARO model (extension .fi)
+   - this will create a folder (with the timestamp), copy this folder and paste on the next step
+   - this script will also create a file called ''
+7. Run perl bdmp-run-all.pl <FOLDER> <PROPERTY-FILE>
+   - in the end, it will create a file called 'script.R', for plotting ALL scenarios
+8. Open RStudio, and then go to <FOLDER> and open the 'script.R', executing all commands
 
 ## Process overview
 The tool executes a Perl script and calls YAMS as a Command Line Interface (CLI).
@@ -30,17 +48,19 @@ YAMS generates an XML file that is processed by the tool to compute the attack p
 BDMPathfinder then creates an RStudio script with all paths over the mission duration (see property `DURATION` below).
 
 ## Properties
-Set up a few properties directly in the script:
-```# Properties for the script, this is self-explanatory
-my %properties = (
-   "WORKING-PATH"    => "C:\\\\Users\\\\stout\\\\Desktop\\\\BDMPathfinder", # **CHANGE HERE** - USE MS-Windows PATH style
-   "OUTPUT-FILE"     => "output.txt",  # output file name
-   "DURATION"        => 96,            # scale is 'hours'
-   "PROB-THRESHOLD"  => 0.8,           # probability threshold
-   "PLOT-X-TICS"     => 1,             # xtics parameter in the plot
-   "PLOT-Y-TICS"     => 0.02,          # ytics
-   "TOP-PATHS"       => 0,             # discover top N paths ** if TOP-PATHS > 0, then only the TOP N paths are considered, otherwise, all are considered **
-);
+Set up a few properties in a properties file (you can choose the name and use it as parameter for 'bdmp-scenario-builder.pl' (use '#' to commenting lines).
+The file below 'looks odd' just to show modellers the use of properties, and how lenient the parser will behave to extract actual (useful) parameters from this file.
+```# use this for commenting lines
+WORKING-PATH    = C://temp//BDMPathfinder # **CHANGE HERE** - USE MS-Windows PATH style
+#duration of the simulation (mission time)
+DURATION        = 24            # scale is 'hours'
+       
+PROB-THRESHOLD  = 0.7           # probability threshold
+  # options for new plots
+PLOT-X-TICS     = 1             # xtics parameter in the plot
+PLOT-Y-TICS     = 0.01          # ytics
+TOP-PATHS       = 0             # discover top N paths ** if TOP-PATHS > 0, then only the TOP N paths are considered, otherwise, all are considered **
+VERBOSE         = 0             # shows output as they are computed
 ```
 
 ## Case studies and examples
