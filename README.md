@@ -1,6 +1,12 @@
 # BDMPathfinder
 A tool for analysing attack paths in BDMP (Boolean logic Driven Markov Processes) models.
 
+## Disclaimer
+We stress the fact the BDMPathfinder tool is a **prototype** -- it has not being implemented with any kind of performance mindset.
+It will run and process scripts in a reasonable amount of time, depending on parameters used.
+You are free to take the ideas discussed herein and code it all in C or C++ or any other language you feel more comfortable with.
+Just bear in mind that most of the toolchain required to actually execute BDMP models is based on MS-Windows platform.
+
 ## Toolchain
 BDMPathfinder runs (and was extensively tested) on MS-Windows.
 
