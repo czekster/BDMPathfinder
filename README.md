@@ -69,33 +69,6 @@ TOP-PATHS       = 0             # discover top N paths ** if TOP-PATHS > 0, then
 VERBOSE         = 0             # shows output as they are computed
 ```
 
-## New features [May/2021]
-Now it is possible to edit file ``bdmp-scenario-builder.pl`` on Perl variable ``%parameters`` and create multiple scenarios for each parameter at the BDMP model.
-The basic functioning goes like this:
-1. Create a BDMP model in RiskSpectrum ModelBuilder (RSMB)
-   - open the properties and set option: GLOBAL_TYPE>OPTIONS>enable_detection to FALSE
-2. For each leaf, assign a number that is unique to your analysis (e.g. 123.456)
-   - the idea is that the script will substitute this string by a set of parameters
-   - assign 'unique' values in the BDMP model in RSMB, e.g. 987.654
-   - for ISE leaves you will have to add values between 0 and 1, so I suggest adding 0.011010101, for instance
-       - then generating the FIGARO0 file and replacing this string by something else more close to your original selected pattern (e.g. "123.456")
-3. Convert the BDMP model to a FIGARO file: Open model, on tab 'Processing', click "Generate Figaro0"
-   - change the directory to save the model to inside the BDMPathfinder is, click "save", click "instantiate"
-4. Edit a properties file (we shipped one called 'bdmp-properties.txt')
-   - change parameters and paths as you see fit
-5. Edit the hash variable %parameters in the Perl script 'bdmp-scenario-builder.pl'
-   - change the string you set in RSMB with all the variations you wish to run (e.g. '123.456' => "1;3;10;15" in hours, it will divide by 3600)
-6. Run perl bdmp-scenario-builder.pl <MODEL>
-   - the model must be a FIGARO model (extension .fi)
-   - this will create a folder (with the timestamp), copy this folder and paste on the next step
-   - this script will also create a file called 'scenarios.txt' with all scenario variations according to the model's leaaves
-7. Run perl bdmp-run-all.pl <FOLDER> <PROPERTY-FILE>
-   - in the end, it will create a file called 'script.R', for plotting ALL scenarios
-8. Open RStudio, and then go to <FOLDER> and open the 'script.R', executing all commands
-
-If you add one single value for each parameter, then it corresponds to the previous functionality, where each model had a single parameter and multiple executions.
-Open ``scenarios.txt`` to inspect the full list of generated scenarios.
-  
 ## Case studies and examples
 [Click here for case studies and examples](case-studies.md)
 
