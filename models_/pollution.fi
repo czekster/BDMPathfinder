@@ -1,0 +1,5237 @@
+STEPS_ORDER
+	__ARBRE__;
+	default_step;
+	check_priorities;
+	initialization;
+	propagate_effect_S;
+	propagate_effect_detected;
+	propagate_required_prob;
+	propagate_effect_required;
+	propagate_leaves;
+	tops;
+GROUP_NAMES
+	simu_group;
+
+OBJECT OPTIONS IS_A GLOBAL_TYPE;
+	CONSTANT
+	  trimming
+		DOMAIN BOOLEAN
+		= TRUE;
+	  trimming_option
+		DOMAIN 'according_to_article' 'maximum'
+		= 'maximum';
+	  enable_detection
+		DOMAIN 'disabled' 'enabled' 'only_aa' 'ongoing_only' 'without_aposteriori' 'final_only'
+		= 'enabled';
+	  repairable_system
+		DOMAIN BOOLEAN
+		= TRUE;
+	ATTRIBUTE
+	  priority
+		DOMAIN INTEGER
+		REINITIALISATION 10;
+
+OBJECT CC_instructions_falsifications IS_A aa_leaf;
+	INTERFACE
+	  fathers
+		= downstream_falsification;
+	ATTRIBUTE
+	  required
+		DOMAIN BOOLEAN
+		REINITIALISATION TRUE;
+	  detected
+		DOMAIN BOOLEAN
+		= FALSE;
+	  final
+		DOMAIN BOOLEAN
+		= FALSE;
+	  already_S
+		DOMAIN BOOLEAN
+		= FALSE;
+	CONSTANT
+	  detection
+		DOMAIN 'disabled' 'global' 'local'
+		= 'global';
+	  calculate_required
+		DOMAIN 'fn_fathers_and_trig' 'fn_fathers_opp_trig' 'always_true' 'always_false' 'equal_to_S_trig' 'opposite_to_S_trig'
+		= 'fn_fathers_and_trig';
+	  force_relevant_events
+		DOMAIN BOOLEAN
+		= FALSE;
+	  transmit_relevance
+		DOMAIN BOOLEAN
+		= TRUE;
+	ATTRIBUTE
+	  S
+		LABEL "%OBJECT"
+		DOMAIN BOOLEAN
+		REINITIALISATION FALSE;
+	  relevant_evt
+		DOMAIN BOOLEAN
+		REINITIALISATION FALSE;
+	CONSTANT
+	  lambda_S_ND
+		DOMAIN REAL
+		= 0.1;
+	  lambda_S_D
+		DOMAIN REAL
+		= 0.1;
+	  gamma_D_I
+		DOMAIN REAL
+		= 0;
+	  lambda_D_O
+		DOMAIN REAL
+		= 0;
+	  gamma_D_F
+		DOMAIN REAL
+		= 0;
+	  lambda_D_A
+		DOMAIN REAL
+		= 0;
+	  skill
+		DOMAIN '0' '1' '2' '3' '4'
+		= '0';
+	  insider
+		DOMAIN BOOLEAN
+		= FALSE;
+	  equipment
+		DOMAIN BOOLEAN
+		= FALSE;
+	  cost
+		DOMAIN REAL
+		= 0;
+	ATTRIBUTE
+	  flagI
+		DOMAIN BOOLEAN
+		= FALSE;
+	  flagF
+		DOMAIN BOOLEAN
+		= FALSE;
+	(*FAILURE*)
+	ATTRIBUTE
+	  aa_success
+		LABEL "success of step %OBJECT"
+		DOMAIN BOOLEAN
+		= FALSE;
+	INTERACTION
+	  mem_S
+		GROUP simu_group
+		STEP propagate_leaves
+		THEN already_S OF CC_instructions_falsifications <-- S OF
+		  CC_instructions_falsifications;
+	  prop_req
+		GROUP simu_group
+		STEP propagate_effect_required
+		IF NOT required OF downstream_falsification
+		THEN required OF CC_instructions_falsifications <-- FALSE;
+	  prop_rel
+		GROUP simu_group
+		STEP propagate_effect_required
+		IF relevant_evt OF downstream_falsification AND (NOT S OF
+		  downstream_falsification)
+		THEN relevant_evt OF CC_instructions_falsifications <-- TRUE;
+	  prop_det
+		GROUP simu_group
+		STEP propagate_effect_detected
+		IF detected OF downstream_falsification
+		THEN detected OF CC_instructions_falsifications <-- TRUE;
+	  prop_final
+		GROUP simu_group
+		STEP initialization
+		IF detected OF CC_instructions_falsifications
+		THEN final OF CC_instructions_falsifications <-- TRUE;
+	  fails
+		GROUP simu_group
+		STEP initialization
+		IF aa_success OF CC_instructions_falsifications = TRUE
+		THEN S OF CC_instructions_falsifications <-- TRUE;
+	  define_S
+		GROUP simu_group
+		STEP propagate_effect_S
+		IF (aa_success OF CC_instructions_falsifications = TRUE) AND
+		  required OF CC_instructions_falsifications
+		THEN S OF CC_instructions_falsifications <-- TRUE;
+	OCCURRENCE
+	  success_undetected
+		IF (aa_success OF CC_instructions_falsifications = FALSE) AND ((
+		  (required OF CC_instructions_falsifications AND (NOT
+		  detected OF CC_instructions_falsifications)) AND (NOT S OF
+		  CC_instructions_falsifications)) AND relevant_evt OF
+		  CC_instructions_falsifications)
+		MAY_OCCUR
+		  FAULT aa_success
+		  LABEL "success undetected of step %OBJECT"
+		  DIST EXP (0.1)
+		  INDUCING aa_success OF CC_instructions_falsifications <--
+			TRUE;
+	  success_detected
+		IF (aa_success OF CC_instructions_falsifications = FALSE) AND ((
+		  (required OF CC_instructions_falsifications AND detected OF
+		  CC_instructions_falsifications) AND (NOT S OF
+		  CC_instructions_falsifications)) AND relevant_evt OF
+		  CC_instructions_falsifications)
+		MAY_OCCUR
+		  FAULT aa_success
+		  LABEL "success detected of step %OBJECT"
+		  DIST EXP (0.1)
+		  INDUCING aa_success OF CC_instructions_falsifications <--
+			TRUE;
+	  initial_detection
+		IF ((((required OF CC_instructions_falsifications AND (NOT
+		  detected OF CC_instructions_falsifications)) AND
+		  relevant_evt OF CC_instructions_falsifications) AND (NOT
+		  flagI OF CC_instructions_falsifications)) AND (NOT S OF
+		  CC_instructions_falsifications)) AND final OF
+		  downstream_falsification
+		MAY_OCCUR
+		  TRANSITION no_detectionI
+		  DIST INS (1)
+		  INDUCING flagI OF CC_instructions_falsifications <-- TRUE
+		OR_ELSE
+		  TRANSITION detectionI
+		  LABEL "initial detection of step %OBJECT"
+		  DIST INS (0)
+		  INDUCING detected OF CC_instructions_falsifications <-- TRUE;
+	  ongoing_detection
+		IF ((required OF CC_instructions_falsifications AND (NOT
+		  detected OF CC_instructions_falsifications)) AND
+		  relevant_evt OF CC_instructions_falsifications) AND (NOT S
+		  OF CC_instructions_falsifications)
+		MAY_OCCUR
+		  TRANSITION detectionO
+		  LABEL "ongoing detection of step %OBJECT"
+		  DIST EXP (0)
+		  INDUCING detected OF CC_instructions_falsifications <-- TRUE;
+	  final_detection
+		IF (((required OF CC_instructions_falsifications AND (NOT
+		  detected OF CC_instructions_falsifications)) AND
+		  relevant_evt OF CC_instructions_falsifications) AND S OF
+		  CC_instructions_falsifications) AND (NOT flagF OF
+		  CC_instructions_falsifications)
+		MAY_OCCUR
+		  TRANSITION no_detectionF
+		  DIST INS (1)
+		  INDUCING flagF OF CC_instructions_falsifications <-- TRUE,
+			final OF CC_instructions_falsifications <-- TRUE
+		OR_ELSE
+		  TRANSITION detectionF
+		  LABEL "final detection of step %OBJECT"
+		  DIST INS (0)
+		  INDUCING detected OF CC_instructions_falsifications <-- TRUE,
+			final OF CC_instructions_falsifications <-- TRUE;
+	  a_posteriori_detection
+		IF ((required OF CC_instructions_falsifications AND (NOT
+		  detected OF CC_instructions_falsifications)) AND
+		  relevant_evt OF CC_instructions_falsifications) AND S OF
+		  CC_instructions_falsifications
+		MAY_OCCUR
+		  TRANSITION detectionA
+		  LABEL "a posteriori detection of step %OBJECT"
+		  DIST EXP (0)
+		  INDUCING detected OF CC_instructions_falsifications <-- TRUE;
+
+OBJECT Control_Center IS_A i_leaf;
+	INTERFACE
+	  fathers
+		= from_CC;
+	ATTRIBUTE
+	  required
+		DOMAIN BOOLEAN
+		REINITIALISATION TRUE;
+	  detected
+		DOMAIN BOOLEAN
+		= FALSE;
+	  final
+		DOMAIN BOOLEAN
+		= FALSE;
+	  already_S
+		DOMAIN BOOLEAN
+		= FALSE;
+	CONSTANT
+	  detection
+		DOMAIN 'disabled' 'global' 'local'
+		= 'disabled';
+	  calculate_required
+		DOMAIN 'fn_fathers_and_trig' 'fn_fathers_opp_trig' 'always_true' 'always_false' 'equal_to_S_trig' 'opposite_to_S_trig'
+		= 'fn_fathers_and_trig';
+	  force_relevant_events
+		DOMAIN BOOLEAN
+		= FALSE;
+	  transmit_relevance
+		DOMAIN BOOLEAN
+		= TRUE;
+	ATTRIBUTE
+	  S
+		LABEL "%OBJECT"
+		DOMAIN BOOLEAN
+		REINITIALISATION FALSE;
+	  relevant_evt
+		DOMAIN BOOLEAN
+		REINITIALISATION FALSE;
+	  waiting_for_rep
+		DOMAIN BOOLEAN
+		= FALSE;
+	CONSTANT
+	  rep_priority
+		DOMAIN INTEGER
+		= 1;
+	  mu
+		DOMAIN REAL
+		= 0.067;
+	  when_to_check
+		DOMAIN 'not_req_to_req' 'req_to_not_req'
+		= 'not_req_to_req';
+	  gamma
+		DOMAIN REAL
+		= 0.000855;
+	  failI_FROZEN
+		DOMAIN BOOLEAN
+		= FALSE;
+	(*FAILURE*)
+	ATTRIBUTE
+	  failI
+		LABEL "instantaneous failure of %OBJECT"
+		DOMAIN BOOLEAN
+		= FALSE;
+	ATTRIBUTE
+	  to_be_fired
+		DOMAIN BOOLEAN
+		REINITIALISATION FALSE;
+	  already_standby
+		DOMAIN BOOLEAN
+		= FALSE;
+	  already_required
+		DOMAIN BOOLEAN
+		= FALSE;
+	INTERACTION
+	  mem_S
+		GROUP simu_group
+		STEP propagate_leaves
+		THEN already_S OF Control_Center <-- S OF Control_Center;
+	  prop_req
+		GROUP simu_group
+		STEP propagate_effect_required
+		IF NOT required OF from_CC
+		THEN required OF Control_Center <-- FALSE;
+	  prop_rel
+		GROUP simu_group
+		STEP propagate_effect_required
+		IF relevant_evt OF from_CC AND (NOT S OF from_CC)
+		THEN relevant_evt OF Control_Center <-- TRUE;
+	  prop_final
+		GROUP simu_group
+		STEP initialization
+		IF detected OF Control_Center
+		THEN final OF Control_Center <-- TRUE;
+	  fails
+		GROUP simu_group
+		STEP initialization
+		IF failI OF Control_Center = TRUE
+		THEN S OF Control_Center <-- TRUE;
+	  define_S
+		GROUP simu_group
+		STEP propagate_effect_S
+		IF (failI OF Control_Center = TRUE) AND required OF
+		  Control_Center
+		THEN S OF Control_Center <-- TRUE;
+	  get_rep
+		GROUP simu_group
+		STEP propagate_leaves
+		IF (failI OF Control_Center = TRUE) AND waiting_for_rep OF
+		  Control_Center
+		THEN waiting_for_rep OF Control_Center <-- FALSE;
+	  nrtr
+		GROUP simu_group
+		STEP propagate_leaves
+		IF (NOT required OF Control_Center) AND ((NOT already_standby
+		  OF Control_Center) AND (NOT already_required OF
+		  Control_Center))
+		THEN already_standby OF Control_Center <-- TRUE;
+	  to_fire
+		GROUP simu_group
+		STEP tops
+		IF required OF Control_Center AND already_standby OF
+		  Control_Center
+		THEN to_be_fired OF Control_Center <-- TRUE;
+	OCCURRENCE
+	  failureI
+		GROUP simu_group
+		IF (failI OF Control_Center = FALSE) AND (to_be_fired OF
+		  Control_Center AND relevant_evt OF Control_Center)
+		MAY_OCCUR
+		  FAULT failI
+		  LABEL "instantaneous failure of %OBJECT"
+		  DIST INS (0.000855)
+		  INDUCING failI OF Control_Center <-- TRUE,
+			already_standby OF Control_Center <-- FALSE,
+			already_required OF Control_Center <-- FALSE,
+			waiting_for_rep OF Control_Center <-- TRUE,
+			final OF Control_Center <-- TRUE
+		OR_ELSE
+		  TRANSITION good
+		  DIST INS (0.999145)
+		  INDUCING already_standby OF Control_Center <-- FALSE,
+			already_required OF Control_Center <-- FALSE,
+			final OF Control_Center <-- TRUE;
+	  repairI
+		GROUP simu_group
+		IF (failI OF Control_Center = TRUE) AND (NOT waiting_for_rep OF
+		  Control_Center)
+		MAY_OCCUR
+		  REPAIR rep
+		  DIST EXP (0.067)
+		  INDUCING failI OF Control_Center <-- FALSE,
+			final OF Control_Center <-- FALSE;
+
+OBJECT No_instruction IS_A and_gate;
+	INTERFACE
+	  sons
+		= from_CC from_RTU;
+	  fathers
+		= protection_failure;
+	  triggers
+		= On_demand_failure;
+	ATTRIBUTE
+	  required
+		DOMAIN BOOLEAN
+		REINITIALISATION TRUE;
+	  detected
+		DOMAIN BOOLEAN
+		= FALSE;
+	  final
+		DOMAIN BOOLEAN
+		= FALSE;
+	  already_S
+		DOMAIN BOOLEAN
+		= FALSE;
+	CONSTANT
+	  detection
+		DOMAIN 'disabled' 'global' 'local'
+		= 'global';
+	  calculate_required
+		DOMAIN 'fn_fathers_and_trig' 'fn_fathers_opp_trig' 'always_true' 'always_false' 'equal_to_S_trig' 'opposite_to_S_trig'
+		= 'fn_fathers_opp_trig';
+	  force_relevant_events
+		DOMAIN BOOLEAN
+		= FALSE;
+	  transmit_relevance
+		DOMAIN BOOLEAN
+		= TRUE;
+	ATTRIBUTE
+	  S
+		LABEL "%OBJECT"
+		DOMAIN BOOLEAN
+		REINITIALISATION FALSE;
+	  relevant_evt
+		DOMAIN BOOLEAN
+		REINITIALISATION FALSE;
+	INTERACTION
+	  mem_S
+		GROUP simu_group
+		STEP propagate_leaves
+		THEN already_S OF No_instruction <-- S OF No_instruction;
+	  prop_req
+		GROUP simu_group
+		STEP propagate_effect_required
+		IF NOT required OF protection_failure
+		THEN required OF No_instruction <-- FALSE;
+	  prop_rel
+		GROUP simu_group
+		STEP propagate_effect_required
+		IF (relevant_evt OF protection_failure AND (NOT S OF
+		  protection_failure)) OR (relevant_evt OF On_demand_failure
+		  AND (NOT S OF On_demand_failure))
+		THEN relevant_evt OF No_instruction <-- TRUE;
+	  prop_det
+		GROUP simu_group
+		STEP propagate_effect_detected
+		IF (detected OF from_CC OR detected OF from_RTU) OR detected OF
+		  protection_failure
+		THEN detected OF No_instruction <-- TRUE;
+	  prop_final
+		GROUP simu_group
+		STEP initialization
+		IF detected OF No_instruction
+		THEN final OF No_instruction <-- TRUE;
+	  prop_fin
+		GROUP simu_group
+		STEP initialization
+		IF final OF protection_failure
+		THEN final OF No_instruction <-- TRUE;
+	  and
+		GROUP simu_group
+		STEP propagate_effect_S
+		IF (S OF from_CC AND final OF from_CC) AND (S OF from_RTU AND
+		  final OF from_RTU)
+		THEN S OF No_instruction <-- TRUE,
+		  final OF No_instruction <-- TRUE;
+
+OBJECT No_reflex_action IS_A f_leaf;
+	INTERFACE
+	  fathers
+		= from_RTU reflex_action_desactivation;
+	ATTRIBUTE
+	  required
+		DOMAIN BOOLEAN
+		REINITIALISATION TRUE;
+	  detected
+		DOMAIN BOOLEAN
+		= FALSE;
+	  final
+		DOMAIN BOOLEAN
+		= FALSE;
+	  already_S
+		DOMAIN BOOLEAN
+		= FALSE;
+	CONSTANT
+	  detection
+		DOMAIN 'disabled' 'global' 'local'
+		= 'disabled';
+	  calculate_required
+		DOMAIN 'fn_fathers_and_trig' 'fn_fathers_opp_trig' 'always_true' 'always_false' 'equal_to_S_trig' 'opposite_to_S_trig'
+		= 'fn_fathers_and_trig';
+	  force_relevant_events
+		DOMAIN BOOLEAN
+		= FALSE;
+	  transmit_relevance
+		DOMAIN BOOLEAN
+		= TRUE;
+	ATTRIBUTE
+	  S
+		LABEL "%OBJECT"
+		DOMAIN BOOLEAN
+		REINITIALISATION FALSE;
+	  relevant_evt
+		DOMAIN BOOLEAN
+		REINITIALISATION FALSE;
+	  waiting_for_rep
+		DOMAIN BOOLEAN
+		= FALSE;
+	CONSTANT
+	  rep_priority
+		DOMAIN INTEGER
+		= 1;
+	  mu
+		DOMAIN REAL
+		= 0.1;
+	  lambda
+		DOMAIN REAL
+		= 0.0001;
+	  failF_FROZEN
+		DOMAIN BOOLEAN
+		= TRUE;
+	(*FAILURE*)
+	ATTRIBUTE
+	  failF
+		LABEL "failure in operation of %OBJECT"
+		DOMAIN BOOLEAN
+		= TRUE;
+	INTERACTION
+	  mem_S
+		GROUP simu_group
+		STEP propagate_leaves
+		THEN already_S OF No_reflex_action <-- S OF No_reflex_action;
+	  prop_req
+		GROUP simu_group
+		STEP propagate_effect_required
+		IF (NOT required OF from_RTU) AND (NOT required OF
+		  reflex_action_desactivation)
+		THEN required OF No_reflex_action <-- FALSE;
+	  prop_rel
+		GROUP simu_group
+		STEP propagate_effect_required
+		IF (relevant_evt OF from_RTU AND (NOT S OF from_RTU)) OR (
+		  relevant_evt OF reflex_action_desactivation AND (NOT S OF
+		  reflex_action_desactivation))
+		THEN relevant_evt OF No_reflex_action <-- TRUE;
+	  prop_final
+		GROUP simu_group
+		STEP initialization
+		IF detected OF No_reflex_action
+		THEN final OF No_reflex_action <-- TRUE;
+	  fails
+		GROUP simu_group
+		STEP initialization
+		IF failF OF No_reflex_action = TRUE
+		THEN S OF No_reflex_action <-- TRUE;
+	  define_S
+		GROUP simu_group
+		STEP propagate_effect_S
+		IF (failF OF No_reflex_action = TRUE) AND required OF
+		  No_reflex_action
+		THEN S OF No_reflex_action <-- TRUE;
+	  get_rep
+		GROUP simu_group
+		STEP propagate_leaves
+		IF (failF OF No_reflex_action = TRUE) AND waiting_for_rep OF
+		  No_reflex_action
+		THEN waiting_for_rep OF No_reflex_action <-- FALSE;
+
+OBJECT On_demand_failure IS_A and_gate;
+	INTERFACE
+	  sons
+		= pumps_on_demand_failure_to_stop valves_on_demand_failure_to_close;
+	  fathers
+		= protection_failure;
+	  triggered_by
+		= No_instruction;
+	ATTRIBUTE
+	  required
+		DOMAIN BOOLEAN
+		REINITIALISATION TRUE;
+	  detected
+		DOMAIN BOOLEAN
+		= FALSE;
+	  final
+		DOMAIN BOOLEAN
+		= FALSE;
+	  already_S
+		DOMAIN BOOLEAN
+		= FALSE;
+	CONSTANT
+	  detection
+		DOMAIN 'disabled' 'global' 'local'
+		= 'global';
+	  calculate_required
+		DOMAIN 'fn_fathers_and_trig' 'fn_fathers_opp_trig' 'always_true' 'always_false' 'equal_to_S_trig' 'opposite_to_S_trig'
+		= 'fn_fathers_opp_trig';
+	  force_relevant_events
+		DOMAIN BOOLEAN
+		= FALSE;
+	  transmit_relevance
+		DOMAIN BOOLEAN
+		= TRUE;
+	ATTRIBUTE
+	  S
+		LABEL "%OBJECT"
+		DOMAIN BOOLEAN
+		REINITIALISATION FALSE;
+	  relevant_evt
+		DOMAIN BOOLEAN
+		REINITIALISATION FALSE;
+	INTERACTION
+	  mem_S
+		GROUP simu_group
+		STEP propagate_leaves
+		THEN already_S OF On_demand_failure <-- S OF On_demand_failure;
+	  prop_req
+		GROUP simu_group
+		STEP propagate_effect_required
+		IF (NOT required OF protection_failure) OR S OF No_instruction
+		THEN required OF On_demand_failure <-- FALSE;
+	  prop_rel
+		GROUP simu_group
+		STEP propagate_effect_required
+		IF relevant_evt OF protection_failure AND (NOT S OF
+		  protection_failure)
+		THEN relevant_evt OF On_demand_failure <-- TRUE;
+	  prop_det
+		GROUP simu_group
+		STEP propagate_effect_detected
+		IF detected OF protection_failure
+		THEN detected OF On_demand_failure <-- TRUE;
+	  prop_final
+		GROUP simu_group
+		STEP initialization
+		IF detected OF On_demand_failure
+		THEN final OF On_demand_failure <-- TRUE;
+	  prop_fin
+		GROUP simu_group
+		STEP initialization
+		IF final OF No_instruction AND final OF protection_failure
+		THEN final OF On_demand_failure <-- TRUE;
+	  and
+		GROUP simu_group
+		STEP propagate_effect_S
+		IF (S OF pumps_on_demand_failure_to_stop AND final OF
+		  pumps_on_demand_failure_to_stop) AND (S OF
+		  valves_on_demand_failure_to_close AND final OF
+		  valves_on_demand_failure_to_close)
+		THEN S OF On_demand_failure <-- TRUE,
+		  final OF On_demand_failure <-- TRUE;
+
+OBJECT RTU IS_A i_leaf;
+	INTERFACE
+	  fathers
+		= from_RTU;
+	ATTRIBUTE
+	  required
+		DOMAIN BOOLEAN
+		REINITIALISATION TRUE;
+	  detected
+		DOMAIN BOOLEAN
+		= FALSE;
+	  final
+		DOMAIN BOOLEAN
+		= FALSE;
+	  already_S
+		DOMAIN BOOLEAN
+		= FALSE;
+	CONSTANT
+	  detection
+		DOMAIN 'disabled' 'global' 'local'
+		= 'disabled';
+	  calculate_required
+		DOMAIN 'fn_fathers_and_trig' 'fn_fathers_opp_trig' 'always_true' 'always_false' 'equal_to_S_trig' 'opposite_to_S_trig'
+		= 'fn_fathers_and_trig';
+	  force_relevant_events
+		DOMAIN BOOLEAN
+		= FALSE;
+	  transmit_relevance
+		DOMAIN BOOLEAN
+		= TRUE;
+	ATTRIBUTE
+	  S
+		LABEL "%OBJECT"
+		DOMAIN BOOLEAN
+		REINITIALISATION FALSE;
+	  relevant_evt
+		DOMAIN BOOLEAN
+		REINITIALISATION FALSE;
+	  waiting_for_rep
+		DOMAIN BOOLEAN
+		= FALSE;
+	CONSTANT
+	  rep_priority
+		DOMAIN INTEGER
+		= 1;
+	  mu
+		DOMAIN REAL
+		= 0.1;
+	  when_to_check
+		DOMAIN 'not_req_to_req' 'req_to_not_req'
+		= 'not_req_to_req';
+	  gamma
+		DOMAIN REAL
+		= 0.00057;
+	  failI_FROZEN
+		DOMAIN BOOLEAN
+		= FALSE;
+	(*FAILURE*)
+	ATTRIBUTE
+	  failI
+		LABEL "instantaneous failure of %OBJECT"
+		DOMAIN BOOLEAN
+		= FALSE;
+	ATTRIBUTE
+	  to_be_fired
+		DOMAIN BOOLEAN
+		REINITIALISATION FALSE;
+	  already_standby
+		DOMAIN BOOLEAN
+		= FALSE;
+	  already_required
+		DOMAIN BOOLEAN
+		= FALSE;
+	INTERACTION
+	  mem_S
+		GROUP simu_group
+		STEP propagate_leaves
+		THEN already_S OF RTU <-- S OF RTU;
+	  prop_req
+		GROUP simu_group
+		STEP propagate_effect_required
+		IF NOT required OF from_RTU
+		THEN required OF RTU <-- FALSE;
+	  prop_rel
+		GROUP simu_group
+		STEP propagate_effect_required
+		IF relevant_evt OF from_RTU AND (NOT S OF from_RTU)
+		THEN relevant_evt OF RTU <-- TRUE;
+	  prop_final
+		GROUP simu_group
+		STEP initialization
+		IF detected OF RTU
+		THEN final OF RTU <-- TRUE;
+	  fails
+		GROUP simu_group
+		STEP initialization
+		IF failI OF RTU = TRUE
+		THEN S OF RTU <-- TRUE;
+	  define_S
+		GROUP simu_group
+		STEP propagate_effect_S
+		IF (failI OF RTU = TRUE) AND required OF RTU
+		THEN S OF RTU <-- TRUE;
+	  get_rep
+		GROUP simu_group
+		STEP propagate_leaves
+		IF (failI OF RTU = TRUE) AND waiting_for_rep OF RTU
+		THEN waiting_for_rep OF RTU <-- FALSE;
+	  nrtr
+		GROUP simu_group
+		STEP propagate_leaves
+		IF (NOT required OF RTU) AND ((NOT already_standby OF RTU) AND (
+		  NOT already_required OF RTU))
+		THEN already_standby OF RTU <-- TRUE;
+	  to_fire
+		GROUP simu_group
+		STEP tops
+		IF required OF RTU AND already_standby OF RTU
+		THEN to_be_fired OF RTU <-- TRUE;
+	OCCURRENCE
+	  failureI
+		GROUP simu_group
+		IF (failI OF RTU = FALSE) AND (to_be_fired OF RTU AND
+		  relevant_evt OF RTU)
+		MAY_OCCUR
+		  FAULT failI
+		  LABEL "instantaneous failure of %OBJECT"
+		  DIST INS (0.00057)
+		  INDUCING failI OF RTU <-- TRUE,
+			already_standby OF RTU <-- FALSE,
+			already_required OF RTU <-- FALSE,
+			waiting_for_rep OF RTU <-- TRUE,
+			final OF RTU <-- TRUE
+		OR_ELSE
+		  TRANSITION good
+		  DIST INS (0.99943)
+		  INDUCING already_standby OF RTU <-- FALSE,
+			already_required OF RTU <-- FALSE,
+			final OF RTU <-- TRUE;
+	  repairI
+		GROUP simu_group
+		IF (failI OF RTU = TRUE) AND (NOT waiting_for_rep OF RTU)
+		MAY_OCCUR
+		  REPAIR rep
+		  DIST EXP (0.1)
+		  INDUCING failI OF RTU <-- FALSE,
+			final OF RTU <-- FALSE;
+
+OBJECT Waterhammer_attack IS_A and_gate;
+	INTERFACE
+	  sons
+		= closing_valve high_pumping_pressure_activation;
+	  fathers
+		= pipeline_break;
+	  triggered_by
+		= protection_system_attack;
+	ATTRIBUTE
+	  required
+		DOMAIN BOOLEAN
+		REINITIALISATION TRUE;
+	  detected
+		DOMAIN BOOLEAN
+		= FALSE;
+	  final
+		DOMAIN BOOLEAN
+		= FALSE;
+	  already_S
+		DOMAIN BOOLEAN
+		= FALSE;
+	CONSTANT
+	  detection
+		DOMAIN 'disabled' 'global' 'local'
+		= 'global';
+	  calculate_required
+		DOMAIN 'fn_fathers_and_trig' 'fn_fathers_opp_trig' 'always_true' 'always_false' 'equal_to_S_trig' 'opposite_to_S_trig'
+		= 'fn_fathers_and_trig';
+	  force_relevant_events
+		DOMAIN BOOLEAN
+		= FALSE;
+	  transmit_relevance
+		DOMAIN BOOLEAN
+		= TRUE;
+	ATTRIBUTE
+	  S
+		LABEL "%OBJECT"
+		DOMAIN BOOLEAN
+		REINITIALISATION FALSE;
+	  relevant_evt
+		DOMAIN BOOLEAN
+		REINITIALISATION FALSE;
+	INTERACTION
+	  mem_S
+		GROUP simu_group
+		STEP propagate_leaves
+		THEN already_S OF Waterhammer_attack <-- S OF
+		  Waterhammer_attack;
+	  prop_req
+		GROUP simu_group
+		STEP propagate_effect_required
+		IF (NOT required OF pipeline_break) OR (NOT S OF
+		  protection_system_attack)
+		THEN required OF Waterhammer_attack <-- FALSE;
+	  prop_rel
+		GROUP simu_group
+		STEP propagate_effect_required
+		IF relevant_evt OF pipeline_break AND (NOT S OF pipeline_break)
+		THEN relevant_evt OF Waterhammer_attack <-- TRUE;
+	  prop_det
+		GROUP simu_group
+		STEP propagate_effect_detected
+		IF (detected OF closing_valve OR detected OF
+		  high_pumping_pressure_activation) OR detected OF
+		  pipeline_break
+		THEN detected OF Waterhammer_attack <-- TRUE;
+	  prop_final
+		GROUP simu_group
+		STEP initialization
+		IF detected OF Waterhammer_attack
+		THEN final OF Waterhammer_attack <-- TRUE;
+	  prop_fin
+		GROUP simu_group
+		STEP initialization
+		IF final OF protection_system_attack AND final OF
+		  pipeline_break
+		THEN final OF Waterhammer_attack <-- TRUE;
+	  and
+		GROUP simu_group
+		STEP propagate_effect_S
+		IF (S OF closing_valve AND final OF closing_valve) AND (S OF
+		  high_pumping_pressure_activation AND final OF
+		  high_pumping_pressure_activation)
+		THEN S OF Waterhammer_attack <-- TRUE,
+		  final OF Waterhammer_attack <-- TRUE;
+
+OBJECT access_to_CC IS_A aa_leaf;
+	INTERFACE
+	  fathers
+		= downstream;
+	ATTRIBUTE
+	  required
+		DOMAIN BOOLEAN
+		REINITIALISATION TRUE;
+	  detected
+		DOMAIN BOOLEAN
+		= FALSE;
+	  final
+		DOMAIN BOOLEAN
+		= FALSE;
+	  already_S
+		DOMAIN BOOLEAN
+		= FALSE;
+	CONSTANT
+	  detection
+		DOMAIN 'disabled' 'global' 'local'
+		= 'global';
+	  calculate_required
+		DOMAIN 'fn_fathers_and_trig' 'fn_fathers_opp_trig' 'always_true' 'always_false' 'equal_to_S_trig' 'opposite_to_S_trig'
+		= 'fn_fathers_and_trig';
+	  force_relevant_events
+		DOMAIN BOOLEAN
+		= FALSE;
+	  transmit_relevance
+		DOMAIN BOOLEAN
+		= TRUE;
+	ATTRIBUTE
+	  S
+		LABEL "%OBJECT"
+		DOMAIN BOOLEAN
+		REINITIALISATION FALSE;
+	  relevant_evt
+		DOMAIN BOOLEAN
+		REINITIALISATION FALSE;
+	CONSTANT
+	  lambda_S_ND
+		DOMAIN REAL
+		= 0.0138;
+	  lambda_S_D
+		DOMAIN REAL
+		= 0.0138;
+	  gamma_D_I
+		DOMAIN REAL
+		= 0;
+	  lambda_D_O
+		DOMAIN REAL
+		= 0;
+	  gamma_D_F
+		DOMAIN REAL
+		= 0;
+	  lambda_D_A
+		DOMAIN REAL
+		= 0;
+	  skill
+		DOMAIN '0' '1' '2' '3' '4'
+		= '0';
+	  insider
+		DOMAIN BOOLEAN
+		= FALSE;
+	  equipment
+		DOMAIN BOOLEAN
+		= FALSE;
+	  cost
+		DOMAIN REAL
+		= 0;
+	ATTRIBUTE
+	  flagI
+		DOMAIN BOOLEAN
+		= FALSE;
+	  flagF
+		DOMAIN BOOLEAN
+		= FALSE;
+	(*FAILURE*)
+	ATTRIBUTE
+	  aa_success
+		LABEL "success of step %OBJECT"
+		DOMAIN BOOLEAN
+		= FALSE;
+	INTERACTION
+	  mem_S
+		GROUP simu_group
+		STEP propagate_leaves
+		THEN already_S OF access_to_CC <-- S OF access_to_CC;
+	  prop_req
+		GROUP simu_group
+		STEP propagate_effect_required
+		IF NOT required OF downstream
+		THEN required OF access_to_CC <-- FALSE;
+	  prop_rel
+		GROUP simu_group
+		STEP propagate_effect_required
+		IF relevant_evt OF downstream AND (NOT S OF downstream)
+		THEN relevant_evt OF access_to_CC <-- TRUE;
+	  prop_det
+		GROUP simu_group
+		STEP propagate_effect_detected
+		IF detected OF downstream
+		THEN detected OF access_to_CC <-- TRUE;
+	  prop_final
+		GROUP simu_group
+		STEP initialization
+		IF detected OF access_to_CC
+		THEN final OF access_to_CC <-- TRUE;
+	  fails
+		GROUP simu_group
+		STEP initialization
+		IF aa_success OF access_to_CC = TRUE
+		THEN S OF access_to_CC <-- TRUE;
+	  define_S
+		GROUP simu_group
+		STEP propagate_effect_S
+		IF (aa_success OF access_to_CC = TRUE) AND required OF
+		  access_to_CC
+		THEN S OF access_to_CC <-- TRUE;
+	OCCURRENCE
+	  success_undetected
+		IF (aa_success OF access_to_CC = FALSE) AND (((required OF
+		  access_to_CC AND (NOT detected OF access_to_CC)) AND (NOT S
+		  OF access_to_CC)) AND relevant_evt OF access_to_CC)
+		MAY_OCCUR
+		  FAULT aa_success
+		  LABEL "success undetected of step %OBJECT"
+		  DIST EXP (0.0138)
+		  INDUCING aa_success OF access_to_CC <-- TRUE;
+	  success_detected
+		IF (aa_success OF access_to_CC = FALSE) AND (((required OF
+		  access_to_CC AND detected OF access_to_CC) AND (NOT S OF
+		  access_to_CC)) AND relevant_evt OF access_to_CC)
+		MAY_OCCUR
+		  FAULT aa_success
+		  LABEL "success detected of step %OBJECT"
+		  DIST EXP (0.0138)
+		  INDUCING aa_success OF access_to_CC <-- TRUE;
+	  initial_detection
+		IF ((((required OF access_to_CC AND (NOT detected OF
+		  access_to_CC)) AND relevant_evt OF access_to_CC) AND (NOT
+		  flagI OF access_to_CC)) AND (NOT S OF access_to_CC)) AND
+		  final OF downstream
+		MAY_OCCUR
+		  TRANSITION no_detectionI
+		  DIST INS (1)
+		  INDUCING flagI OF access_to_CC <-- TRUE
+		OR_ELSE
+		  TRANSITION detectionI
+		  LABEL "initial detection of step %OBJECT"
+		  DIST INS (0)
+		  INDUCING detected OF access_to_CC <-- TRUE;
+	  ongoing_detection
+		IF ((required OF access_to_CC AND (NOT detected OF access_to_CC)
+		  ) AND relevant_evt OF access_to_CC) AND (NOT S OF
+		  access_to_CC)
+		MAY_OCCUR
+		  TRANSITION detectionO
+		  LABEL "ongoing detection of step %OBJECT"
+		  DIST EXP (0)
+		  INDUCING detected OF access_to_CC <-- TRUE;
+	  final_detection
+		IF (((required OF access_to_CC AND (NOT detected OF
+		  access_to_CC)) AND relevant_evt OF access_to_CC) AND S OF
+		  access_to_CC) AND (NOT flagF OF access_to_CC)
+		MAY_OCCUR
+		  TRANSITION no_detectionF
+		  DIST INS (1)
+		  INDUCING flagF OF access_to_CC <-- TRUE,
+			final OF access_to_CC <-- TRUE
+		OR_ELSE
+		  TRANSITION detectionF
+		  LABEL "final detection of step %OBJECT"
+		  DIST INS (0)
+		  INDUCING detected OF access_to_CC <-- TRUE,
+			final OF access_to_CC <-- TRUE;
+	  a_posteriori_detection
+		IF ((required OF access_to_CC AND (NOT detected OF access_to_CC)
+		  ) AND relevant_evt OF access_to_CC) AND S OF access_to_CC
+		MAY_OCCUR
+		  TRANSITION detectionA
+		  LABEL "a posteriori detection of step %OBJECT"
+		  DIST EXP (0)
+		  INDUCING detected OF access_to_CC <-- TRUE;
+
+OBJECT access_to_RTU IS_A aa_leaf;
+	INTERFACE
+	  fathers
+		= upstream;
+	ATTRIBUTE
+	  required
+		DOMAIN BOOLEAN
+		REINITIALISATION TRUE;
+	  detected
+		DOMAIN BOOLEAN
+		= FALSE;
+	  final
+		DOMAIN BOOLEAN
+		= FALSE;
+	  already_S
+		DOMAIN BOOLEAN
+		= FALSE;
+	CONSTANT
+	  detection
+		DOMAIN 'disabled' 'global' 'local'
+		= 'global';
+	  calculate_required
+		DOMAIN 'fn_fathers_and_trig' 'fn_fathers_opp_trig' 'always_true' 'always_false' 'equal_to_S_trig' 'opposite_to_S_trig'
+		= 'fn_fathers_and_trig';
+	  force_relevant_events
+		DOMAIN BOOLEAN
+		= FALSE;
+	  transmit_relevance
+		DOMAIN BOOLEAN
+		= TRUE;
+	ATTRIBUTE
+	  S
+		LABEL "%OBJECT"
+		DOMAIN BOOLEAN
+		REINITIALISATION FALSE;
+	  relevant_evt
+		DOMAIN BOOLEAN
+		REINITIALISATION FALSE;
+	CONSTANT
+	  lambda_S_ND
+		DOMAIN REAL
+		= 0.0208;
+	  lambda_S_D
+		DOMAIN REAL
+		= 0.0208;
+	  gamma_D_I
+		DOMAIN REAL
+		= 0;
+	  lambda_D_O
+		DOMAIN REAL
+		= 0;
+	  gamma_D_F
+		DOMAIN REAL
+		= 0;
+	  lambda_D_A
+		DOMAIN REAL
+		= 0;
+	  skill
+		DOMAIN '0' '1' '2' '3' '4'
+		= '0';
+	  insider
+		DOMAIN BOOLEAN
+		= FALSE;
+	  equipment
+		DOMAIN BOOLEAN
+		= FALSE;
+	  cost
+		DOMAIN REAL
+		= 0;
+	ATTRIBUTE
+	  flagI
+		DOMAIN BOOLEAN
+		= FALSE;
+	  flagF
+		DOMAIN BOOLEAN
+		= FALSE;
+	(*FAILURE*)
+	ATTRIBUTE
+	  aa_success
+		LABEL "success of step %OBJECT"
+		DOMAIN BOOLEAN
+		= FALSE;
+	INTERACTION
+	  mem_S
+		GROUP simu_group
+		STEP propagate_leaves
+		THEN already_S OF access_to_RTU <-- S OF access_to_RTU;
+	  prop_req
+		GROUP simu_group
+		STEP propagate_effect_required
+		IF NOT required OF upstream
+		THEN required OF access_to_RTU <-- FALSE;
+	  prop_rel
+		GROUP simu_group
+		STEP propagate_effect_required
+		IF relevant_evt OF upstream AND (NOT S OF upstream)
+		THEN relevant_evt OF access_to_RTU <-- TRUE;
+	  prop_det
+		GROUP simu_group
+		STEP propagate_effect_detected
+		IF detected OF upstream
+		THEN detected OF access_to_RTU <-- TRUE;
+	  prop_final
+		GROUP simu_group
+		STEP initialization
+		IF detected OF access_to_RTU
+		THEN final OF access_to_RTU <-- TRUE;
+	  fails
+		GROUP simu_group
+		STEP initialization
+		IF aa_success OF access_to_RTU = TRUE
+		THEN S OF access_to_RTU <-- TRUE;
+	  define_S
+		GROUP simu_group
+		STEP propagate_effect_S
+		IF (aa_success OF access_to_RTU = TRUE) AND required OF
+		  access_to_RTU
+		THEN S OF access_to_RTU <-- TRUE;
+	OCCURRENCE
+	  success_undetected
+		IF (aa_success OF access_to_RTU = FALSE) AND (((required OF
+		  access_to_RTU AND (NOT detected OF access_to_RTU)) AND (NOT
+		  S OF access_to_RTU)) AND relevant_evt OF access_to_RTU)
+		MAY_OCCUR
+		  FAULT aa_success
+		  LABEL "success undetected of step %OBJECT"
+		  DIST EXP (0.0208)
+		  INDUCING aa_success OF access_to_RTU <-- TRUE;
+	  success_detected
+		IF (aa_success OF access_to_RTU = FALSE) AND (((required OF
+		  access_to_RTU AND detected OF access_to_RTU) AND (NOT S OF
+		  access_to_RTU)) AND relevant_evt OF access_to_RTU)
+		MAY_OCCUR
+		  FAULT aa_success
+		  LABEL "success detected of step %OBJECT"
+		  DIST EXP (0.0208)
+		  INDUCING aa_success OF access_to_RTU <-- TRUE;
+	  initial_detection
+		IF ((((required OF access_to_RTU AND (NOT detected OF
+		  access_to_RTU)) AND relevant_evt OF access_to_RTU) AND (NOT
+		  flagI OF access_to_RTU)) AND (NOT S OF access_to_RTU)) AND
+		  final OF upstream
+		MAY_OCCUR
+		  TRANSITION no_detectionI
+		  DIST INS (1)
+		  INDUCING flagI OF access_to_RTU <-- TRUE
+		OR_ELSE
+		  TRANSITION detectionI
+		  LABEL "initial detection of step %OBJECT"
+		  DIST INS (0)
+		  INDUCING detected OF access_to_RTU <-- TRUE;
+	  ongoing_detection
+		IF ((required OF access_to_RTU AND (NOT detected OF
+		  access_to_RTU)) AND relevant_evt OF access_to_RTU) AND (NOT
+		  S OF access_to_RTU)
+		MAY_OCCUR
+		  TRANSITION detectionO
+		  LABEL "ongoing detection of step %OBJECT"
+		  DIST EXP (0)
+		  INDUCING detected OF access_to_RTU <-- TRUE;
+	  final_detection
+		IF (((required OF access_to_RTU AND (NOT detected OF
+		  access_to_RTU)) AND relevant_evt OF access_to_RTU) AND S OF
+		  access_to_RTU) AND (NOT flagF OF access_to_RTU)
+		MAY_OCCUR
+		  TRANSITION no_detectionF
+		  DIST INS (1)
+		  INDUCING flagF OF access_to_RTU <-- TRUE,
+			final OF access_to_RTU <-- TRUE
+		OR_ELSE
+		  TRANSITION detectionF
+		  LABEL "final detection of step %OBJECT"
+		  DIST INS (0)
+		  INDUCING detected OF access_to_RTU <-- TRUE,
+			final OF access_to_RTU <-- TRUE;
+	  a_posteriori_detection
+		IF ((required OF access_to_RTU AND (NOT detected OF
+		  access_to_RTU)) AND relevant_evt OF access_to_RTU) AND S OF
+		  access_to_RTU
+		MAY_OCCUR
+		  TRANSITION detectionA
+		  LABEL "a posteriori detection of step %OBJECT"
+		  DIST EXP (0)
+		  INDUCING detected OF access_to_RTU <-- TRUE;
+
+OBJECT access_to_SCADA_system IS_A or_gate;
+	INTERFACE
+	  sons
+		= downstream upstream;
+	  fathers
+		= protection_system_attack;
+	  triggers
+		= communication_eavesdropping;
+	ATTRIBUTE
+	  required
+		DOMAIN BOOLEAN
+		REINITIALISATION TRUE;
+	  detected
+		DOMAIN BOOLEAN
+		= FALSE;
+	  final
+		DOMAIN BOOLEAN
+		= FALSE;
+	  already_S
+		DOMAIN BOOLEAN
+		= FALSE;
+	CONSTANT
+	  detection
+		DOMAIN 'disabled' 'global' 'local'
+		= 'global';
+	  calculate_required
+		DOMAIN 'fn_fathers_and_trig' 'fn_fathers_opp_trig' 'always_true' 'always_false' 'equal_to_S_trig' 'opposite_to_S_trig'
+		= 'fn_fathers_and_trig';
+	  force_relevant_events
+		DOMAIN BOOLEAN
+		= FALSE;
+	  transmit_relevance
+		DOMAIN BOOLEAN
+		= TRUE;
+	ATTRIBUTE
+	  S
+		LABEL "%OBJECT"
+		DOMAIN BOOLEAN
+		REINITIALISATION FALSE;
+	  relevant_evt
+		DOMAIN BOOLEAN
+		REINITIALISATION FALSE;
+	INTERACTION
+	  mem_S
+		GROUP simu_group
+		STEP propagate_leaves
+		THEN already_S OF access_to_SCADA_system <-- S OF
+		  access_to_SCADA_system;
+	  prop_req
+		GROUP simu_group
+		STEP propagate_effect_required
+		IF NOT required OF protection_system_attack
+		THEN required OF access_to_SCADA_system <-- FALSE;
+	  prop_rel
+		GROUP simu_group
+		STEP propagate_effect_required
+		IF (relevant_evt OF protection_system_attack AND (NOT S OF
+		  protection_system_attack)) OR (relevant_evt OF
+		  communication_eavesdropping AND (NOT S OF
+		  communication_eavesdropping))
+		THEN relevant_evt OF access_to_SCADA_system <-- TRUE;
+	  prop_det
+		GROUP simu_group
+		STEP propagate_effect_detected
+		IF (detected OF downstream OR detected OF upstream) OR detected
+		  OF protection_system_attack
+		THEN detected OF access_to_SCADA_system <-- TRUE;
+	  prop_final
+		GROUP simu_group
+		STEP initialization
+		IF detected OF access_to_SCADA_system
+		THEN final OF access_to_SCADA_system <-- TRUE;
+	  prop_fin
+		GROUP simu_group
+		STEP initialization
+		IF final OF protection_system_attack
+		THEN final OF access_to_SCADA_system <-- TRUE;
+	  or
+		GROUP simu_group
+		STEP propagate_effect_S
+		IF (S OF downstream AND final OF downstream) OR (S OF upstream
+		  AND final OF upstream)
+		THEN S OF access_to_SCADA_system <-- TRUE,
+		  final OF access_to_SCADA_system <-- TRUE;
+
+OBJECT access_to_communication_link IS_A aa_leaf;
+	INTERFACE
+	  fathers
+		= downstream upstream;
+	ATTRIBUTE
+	  required
+		DOMAIN BOOLEAN
+		REINITIALISATION TRUE;
+	  detected
+		DOMAIN BOOLEAN
+		= FALSE;
+	  final
+		DOMAIN BOOLEAN
+		= FALSE;
+	  already_S
+		DOMAIN BOOLEAN
+		= FALSE;
+	CONSTANT
+	  detection
+		DOMAIN 'disabled' 'global' 'local'
+		= 'global';
+	  calculate_required
+		DOMAIN 'fn_fathers_and_trig' 'fn_fathers_opp_trig' 'always_true' 'always_false' 'equal_to_S_trig' 'opposite_to_S_trig'
+		= 'fn_fathers_and_trig';
+	  force_relevant_events
+		DOMAIN BOOLEAN
+		= FALSE;
+	  transmit_relevance
+		DOMAIN BOOLEAN
+		= TRUE;
+	ATTRIBUTE
+	  S
+		LABEL "%OBJECT"
+		DOMAIN BOOLEAN
+		REINITIALISATION FALSE;
+	  relevant_evt
+		DOMAIN BOOLEAN
+		REINITIALISATION FALSE;
+	CONSTANT
+	  lambda_S_ND
+		DOMAIN REAL
+		= 0.0416;
+	  lambda_S_D
+		DOMAIN REAL
+		= 0.0416;
+	  gamma_D_I
+		DOMAIN REAL
+		= 0;
+	  lambda_D_O
+		DOMAIN REAL
+		= 0;
+	  gamma_D_F
+		DOMAIN REAL
+		= 0;
+	  lambda_D_A
+		DOMAIN REAL
+		= 0;
+	  skill
+		DOMAIN '0' '1' '2' '3' '4'
+		= '0';
+	  insider
+		DOMAIN BOOLEAN
+		= FALSE;
+	  equipment
+		DOMAIN BOOLEAN
+		= FALSE;
+	  cost
+		DOMAIN REAL
+		= 0;
+	ATTRIBUTE
+	  flagI
+		DOMAIN BOOLEAN
+		= FALSE;
+	  flagF
+		DOMAIN BOOLEAN
+		= FALSE;
+	(*FAILURE*)
+	ATTRIBUTE
+	  aa_success
+		LABEL "success of step %OBJECT"
+		DOMAIN BOOLEAN
+		= FALSE;
+	INTERACTION
+	  mem_S
+		GROUP simu_group
+		STEP propagate_leaves
+		THEN already_S OF access_to_communication_link <-- S OF
+		  access_to_communication_link;
+	  prop_req
+		GROUP simu_group
+		STEP propagate_effect_required
+		IF (NOT required OF downstream) AND (NOT required OF upstream)
+		THEN required OF access_to_communication_link <-- FALSE;
+	  prop_rel
+		GROUP simu_group
+		STEP propagate_effect_required
+		IF (relevant_evt OF downstream AND (NOT S OF downstream)) OR (
+		  relevant_evt OF upstream AND (NOT S OF upstream))
+		THEN relevant_evt OF access_to_communication_link <-- TRUE;
+	  prop_det
+		GROUP simu_group
+		STEP propagate_effect_detected
+		IF detected OF downstream OR detected OF upstream
+		THEN detected OF access_to_communication_link <-- TRUE;
+	  prop_final
+		GROUP simu_group
+		STEP initialization
+		IF detected OF access_to_communication_link
+		THEN final OF access_to_communication_link <-- TRUE;
+	  fails
+		GROUP simu_group
+		STEP initialization
+		IF aa_success OF access_to_communication_link = TRUE
+		THEN S OF access_to_communication_link <-- TRUE;
+	  define_S
+		GROUP simu_group
+		STEP propagate_effect_S
+		IF (aa_success OF access_to_communication_link = TRUE) AND
+		  required OF access_to_communication_link
+		THEN S OF access_to_communication_link <-- TRUE;
+	OCCURRENCE
+	  success_undetected
+		IF (aa_success OF access_to_communication_link = FALSE) AND (((
+		  required OF access_to_communication_link AND (NOT detected
+		  OF access_to_communication_link)) AND (NOT S OF
+		  access_to_communication_link)) AND relevant_evt OF
+		  access_to_communication_link)
+		MAY_OCCUR
+		  FAULT aa_success
+		  LABEL "success undetected of step %OBJECT"
+		  DIST EXP (0.0416)
+		  INDUCING aa_success OF access_to_communication_link <-- TRUE;
+	  success_detected
+		IF (aa_success OF access_to_communication_link = FALSE) AND (((
+		  required OF access_to_communication_link AND detected OF
+		  access_to_communication_link) AND (NOT S OF
+		  access_to_communication_link)) AND relevant_evt OF
+		  access_to_communication_link)
+		MAY_OCCUR
+		  FAULT aa_success
+		  LABEL "success detected of step %OBJECT"
+		  DIST EXP (0.0416)
+		  INDUCING aa_success OF access_to_communication_link <-- TRUE;
+	  initial_detection
+		IF ((((required OF access_to_communication_link AND (NOT
+		  detected OF access_to_communication_link)) AND relevant_evt
+		  OF access_to_communication_link) AND (NOT flagI OF
+		  access_to_communication_link)) AND (NOT S OF
+		  access_to_communication_link)) AND (final OF downstream AND
+		  final OF upstream)
+		MAY_OCCUR
+		  TRANSITION no_detectionI
+		  DIST INS (1)
+		  INDUCING flagI OF access_to_communication_link <-- TRUE
+		OR_ELSE
+		  TRANSITION detectionI
+		  LABEL "initial detection of step %OBJECT"
+		  DIST INS (0)
+		  INDUCING detected OF access_to_communication_link <-- TRUE;
+	  ongoing_detection
+		IF ((required OF access_to_communication_link AND (NOT detected
+		  OF access_to_communication_link)) AND relevant_evt OF
+		  access_to_communication_link) AND (NOT S OF
+		  access_to_communication_link)
+		MAY_OCCUR
+		  TRANSITION detectionO
+		  LABEL "ongoing detection of step %OBJECT"
+		  DIST EXP (0)
+		  INDUCING detected OF access_to_communication_link <-- TRUE;
+	  final_detection
+		IF (((required OF access_to_communication_link AND (NOT
+		  detected OF access_to_communication_link)) AND relevant_evt
+		  OF access_to_communication_link) AND S OF
+		  access_to_communication_link) AND (NOT flagF OF
+		  access_to_communication_link)
+		MAY_OCCUR
+		  TRANSITION no_detectionF
+		  DIST INS (1)
+		  INDUCING flagF OF access_to_communication_link <-- TRUE,
+			final OF access_to_communication_link <-- TRUE
+		OR_ELSE
+		  TRANSITION detectionF
+		  LABEL "final detection of step %OBJECT"
+		  DIST INS (0)
+		  INDUCING detected OF access_to_communication_link <-- TRUE,
+			final OF access_to_communication_link <-- TRUE;
+	  a_posteriori_detection
+		IF ((required OF access_to_communication_link AND (NOT detected
+		  OF access_to_communication_link)) AND relevant_evt OF
+		  access_to_communication_link) AND S OF
+		  access_to_communication_link
+		MAY_OCCUR
+		  TRANSITION detectionA
+		  LABEL "a posteriori detection of step %OBJECT"
+		  DIST EXP (0)
+		  INDUCING detected OF access_to_communication_link <-- TRUE;
+
+OBJECT alarm_signals_removed IS_A aa_leaf;
+	INTERFACE
+	  fathers
+		= upstream_falsification;
+	  triggered_by
+		= sensors_measures_falsification;
+	ATTRIBUTE
+	  required
+		DOMAIN BOOLEAN
+		REINITIALISATION TRUE;
+	  detected
+		DOMAIN BOOLEAN
+		= FALSE;
+	  final
+		DOMAIN BOOLEAN
+		= FALSE;
+	  already_S
+		DOMAIN BOOLEAN
+		= FALSE;
+	CONSTANT
+	  detection
+		DOMAIN 'disabled' 'global' 'local'
+		= 'global';
+	  calculate_required
+		DOMAIN 'fn_fathers_and_trig' 'fn_fathers_opp_trig' 'always_true' 'always_false' 'equal_to_S_trig' 'opposite_to_S_trig'
+		= 'fn_fathers_and_trig';
+	  force_relevant_events
+		DOMAIN BOOLEAN
+		= FALSE;
+	  transmit_relevance
+		DOMAIN BOOLEAN
+		= TRUE;
+	ATTRIBUTE
+	  S
+		LABEL "%OBJECT"
+		DOMAIN BOOLEAN
+		REINITIALISATION FALSE;
+	  relevant_evt
+		DOMAIN BOOLEAN
+		REINITIALISATION FALSE;
+	CONSTANT
+	  lambda_S_ND
+		DOMAIN REAL
+		= 0.5;
+	  lambda_S_D
+		DOMAIN REAL
+		= 0.5;
+	  gamma_D_I
+		DOMAIN REAL
+		= 0;
+	  lambda_D_O
+		DOMAIN REAL
+		= 0;
+	  gamma_D_F
+		DOMAIN REAL
+		= 0;
+	  lambda_D_A
+		DOMAIN REAL
+		= 0;
+	  skill
+		DOMAIN '0' '1' '2' '3' '4'
+		= '0';
+	  insider
+		DOMAIN BOOLEAN
+		= FALSE;
+	  equipment
+		DOMAIN BOOLEAN
+		= FALSE;
+	  cost
+		DOMAIN REAL
+		= 0;
+	ATTRIBUTE
+	  flagI
+		DOMAIN BOOLEAN
+		= FALSE;
+	  flagF
+		DOMAIN BOOLEAN
+		= FALSE;
+	(*FAILURE*)
+	ATTRIBUTE
+	  aa_success
+		LABEL "success of step %OBJECT"
+		DOMAIN BOOLEAN
+		= FALSE;
+	INTERACTION
+	  mem_S
+		GROUP simu_group
+		STEP propagate_leaves
+		THEN already_S OF alarm_signals_removed <-- S OF
+		  alarm_signals_removed;
+	  prop_req
+		GROUP simu_group
+		STEP propagate_effect_required
+		IF (NOT required OF upstream_falsification) OR (NOT S OF
+		  sensors_measures_falsification)
+		THEN required OF alarm_signals_removed <-- FALSE;
+	  prop_rel
+		GROUP simu_group
+		STEP propagate_effect_required
+		IF relevant_evt OF upstream_falsification AND (NOT S OF
+		  upstream_falsification)
+		THEN relevant_evt OF alarm_signals_removed <-- TRUE;
+	  prop_det
+		GROUP simu_group
+		STEP propagate_effect_detected
+		IF detected OF upstream_falsification
+		THEN detected OF alarm_signals_removed <-- TRUE;
+	  prop_final
+		GROUP simu_group
+		STEP initialization
+		IF detected OF alarm_signals_removed
+		THEN final OF alarm_signals_removed <-- TRUE;
+	  fails
+		GROUP simu_group
+		STEP initialization
+		IF aa_success OF alarm_signals_removed = TRUE
+		THEN S OF alarm_signals_removed <-- TRUE;
+	  define_S
+		GROUP simu_group
+		STEP propagate_effect_S
+		IF (aa_success OF alarm_signals_removed = TRUE) AND required OF
+		  alarm_signals_removed
+		THEN S OF alarm_signals_removed <-- TRUE;
+	OCCURRENCE
+	  success_undetected
+		IF (aa_success OF alarm_signals_removed = FALSE) AND (((
+		  required OF alarm_signals_removed AND (NOT detected OF
+		  alarm_signals_removed)) AND (NOT S OF alarm_signals_removed))
+		   AND relevant_evt OF alarm_signals_removed)
+		MAY_OCCUR
+		  FAULT aa_success
+		  LABEL "success undetected of step %OBJECT"
+		  DIST EXP (0.5)
+		  INDUCING aa_success OF alarm_signals_removed <-- TRUE;
+	  success_detected
+		IF (aa_success OF alarm_signals_removed = FALSE) AND (((
+		  required OF alarm_signals_removed AND detected OF
+		  alarm_signals_removed) AND (NOT S OF alarm_signals_removed))
+		  AND relevant_evt OF alarm_signals_removed)
+		MAY_OCCUR
+		  FAULT aa_success
+		  LABEL "success detected of step %OBJECT"
+		  DIST EXP (0.5)
+		  INDUCING aa_success OF alarm_signals_removed <-- TRUE;
+	  initial_detection
+		IF (((((required OF alarm_signals_removed AND (NOT detected OF
+		  alarm_signals_removed)) AND relevant_evt OF
+		  alarm_signals_removed) AND (NOT flagI OF
+		  alarm_signals_removed)) AND (NOT S OF alarm_signals_removed))
+		   AND final OF sensors_measures_falsification) AND final OF
+		  upstream_falsification
+		MAY_OCCUR
+		  TRANSITION no_detectionI
+		  DIST INS (1)
+		  INDUCING flagI OF alarm_signals_removed <-- TRUE
+		OR_ELSE
+		  TRANSITION detectionI
+		  LABEL "initial detection of step %OBJECT"
+		  DIST INS (0)
+		  INDUCING detected OF alarm_signals_removed <-- TRUE;
+	  ongoing_detection
+		IF ((required OF alarm_signals_removed AND (NOT detected OF
+		  alarm_signals_removed)) AND relevant_evt OF
+		  alarm_signals_removed) AND (NOT S OF alarm_signals_removed)
+		MAY_OCCUR
+		  TRANSITION detectionO
+		  LABEL "ongoing detection of step %OBJECT"
+		  DIST EXP (0)
+		  INDUCING detected OF alarm_signals_removed <-- TRUE;
+	  final_detection
+		IF (((required OF alarm_signals_removed AND (NOT detected OF
+		  alarm_signals_removed)) AND relevant_evt OF
+		  alarm_signals_removed) AND S OF alarm_signals_removed) AND (
+		  NOT flagF OF alarm_signals_removed)
+		MAY_OCCUR
+		  TRANSITION no_detectionF
+		  DIST INS (1)
+		  INDUCING flagF OF alarm_signals_removed <-- TRUE,
+			final OF alarm_signals_removed <-- TRUE
+		OR_ELSE
+		  TRANSITION detectionF
+		  LABEL "final detection of step %OBJECT"
+		  DIST INS (0)
+		  INDUCING detected OF alarm_signals_removed <-- TRUE,
+			final OF alarm_signals_removed <-- TRUE;
+	  a_posteriori_detection
+		IF ((required OF alarm_signals_removed AND (NOT detected OF
+		  alarm_signals_removed)) AND relevant_evt OF
+		  alarm_signals_removed) AND S OF alarm_signals_removed
+		MAY_OCCUR
+		  TRANSITION detectionA
+		  LABEL "a posteriori detection of step %OBJECT"
+		  DIST EXP (0)
+		  INDUCING detected OF alarm_signals_removed <-- TRUE;
+
+OBJECT attack_protection_syst_then_pipeline_break IS_A then_gate;
+	INTERFACE
+	  sons
+		= pipeline_break protection_system_attack;
+	  fathers
+		= differents_scenarios;
+	  first
+		= protection_system_attack;
+	  second
+		= pipeline_break;
+	ATTRIBUTE
+	  required
+		DOMAIN BOOLEAN
+		REINITIALISATION TRUE;
+	  detected
+		DOMAIN BOOLEAN
+		= FALSE;
+	  final
+		DOMAIN BOOLEAN
+		= FALSE;
+	  already_S
+		DOMAIN BOOLEAN
+		= FALSE;
+	CONSTANT
+	  detection
+		DOMAIN 'disabled' 'global' 'local'
+		= 'global';
+	  calculate_required
+		DOMAIN 'fn_fathers_and_trig' 'fn_fathers_opp_trig' 'always_true' 'always_false' 'equal_to_S_trig' 'opposite_to_S_trig'
+		= 'fn_fathers_and_trig';
+	  force_relevant_events
+		DOMAIN BOOLEAN
+		= FALSE;
+	  transmit_relevance
+		DOMAIN BOOLEAN
+		= TRUE;
+	ATTRIBUTE
+	  S
+		LABEL "%OBJECT"
+		DOMAIN BOOLEAN
+		REINITIALISATION FALSE;
+	  relevant_evt
+		DOMAIN BOOLEAN
+		REINITIALISATION FALSE;
+	CONSTANT
+	  step_down
+		DOMAIN 'rep_first' 'rep_second' 'rep_any' 'rep_all'
+		= 'rep_any';
+	INTERACTION
+	  mem_S
+		GROUP simu_group
+		STEP propagate_leaves
+		THEN already_S OF attack_protection_syst_then_pipeline_break
+		  <-- S OF attack_protection_syst_then_pipeline_break;
+	  prop_req
+		GROUP simu_group
+		STEP propagate_effect_required
+		IF NOT required OF differents_scenarios
+		THEN required OF attack_protection_syst_then_pipeline_break <--
+		  FALSE;
+	  prop_rel
+		GROUP simu_group
+		STEP propagate_effect_required
+		IF relevant_evt OF differents_scenarios AND (NOT S OF
+		  differents_scenarios)
+		THEN relevant_evt OF attack_protection_syst_then_pipeline_break
+		  <-- TRUE;
+	  prop_det
+		GROUP simu_group
+		STEP propagate_effect_detected
+		IF (detected OF pipeline_break OR detected OF
+		  protection_system_attack) OR detected OF
+		  differents_scenarios
+		THEN detected OF attack_protection_syst_then_pipeline_break <--
+		  TRUE;
+	  prop_final
+		GROUP simu_group
+		STEP initialization
+		IF detected OF attack_protection_syst_then_pipeline_break
+		THEN final OF attack_protection_syst_then_pipeline_break <--
+		  TRUE;
+	  prop_fin
+		GROUP simu_group
+		STEP initialization
+		IF final OF differents_scenarios
+		THEN final OF attack_protection_syst_then_pipeline_break <--
+		  TRUE;
+	  xx25
+		GROUP simu_group
+		STEP propagate_effect_S
+		IF ((S OF pipeline_break AND S OF protection_system_attack) AND
+		  already_S OF protection_system_attack) AND (NOT already_S OF
+		  pipeline_break)
+		THEN S OF attack_protection_syst_then_pipeline_break <-- TRUE,
+		  final OF attack_protection_syst_then_pipeline_break <-- TRUE;
+	  xx26
+		GROUP simu_group
+		STEP propagate_effect_S
+		IF already_S OF attack_protection_syst_then_pipeline_break AND (
+		  S OF protection_system_attack AND S OF pipeline_break)
+		THEN S OF attack_protection_syst_then_pipeline_break <-- TRUE;
+
+OBJECT b_1 IS_A before_link;
+
+OBJECT b_2 IS_A before_link;
+
+OBJECT closing_valve IS_A aa_leaf;
+	INTERFACE
+	  fathers
+		= Waterhammer_attack;
+	  triggered_by
+		= high_pumping_pressure_activation;
+	ATTRIBUTE
+	  required
+		DOMAIN BOOLEAN
+		REINITIALISATION TRUE;
+	  detected
+		DOMAIN BOOLEAN
+		= FALSE;
+	  final
+		DOMAIN BOOLEAN
+		= FALSE;
+	  already_S
+		DOMAIN BOOLEAN
+		= FALSE;
+	CONSTANT
+	  detection
+		DOMAIN 'disabled' 'global' 'local'
+		= 'global';
+	  calculate_required
+		DOMAIN 'fn_fathers_and_trig' 'fn_fathers_opp_trig' 'always_true' 'always_false' 'equal_to_S_trig' 'opposite_to_S_trig'
+		= 'fn_fathers_and_trig';
+	  force_relevant_events
+		DOMAIN BOOLEAN
+		= FALSE;
+	  transmit_relevance
+		DOMAIN BOOLEAN
+		= TRUE;
+	ATTRIBUTE
+	  S
+		LABEL "%OBJECT"
+		DOMAIN BOOLEAN
+		REINITIALISATION FALSE;
+	  relevant_evt
+		DOMAIN BOOLEAN
+		REINITIALISATION FALSE;
+	CONSTANT
+	  lambda_S_ND
+		DOMAIN REAL
+		= 0.8;
+	  lambda_S_D
+		DOMAIN REAL
+		= 0.8;
+	  gamma_D_I
+		DOMAIN REAL
+		= 0;
+	  lambda_D_O
+		DOMAIN REAL
+		= 0;
+	  gamma_D_F
+		DOMAIN REAL
+		= 0;
+	  lambda_D_A
+		DOMAIN REAL
+		= 0;
+	  skill
+		DOMAIN '0' '1' '2' '3' '4'
+		= '0';
+	  insider
+		DOMAIN BOOLEAN
+		= FALSE;
+	  equipment
+		DOMAIN BOOLEAN
+		= FALSE;
+	  cost
+		DOMAIN REAL
+		= 0;
+	ATTRIBUTE
+	  flagI
+		DOMAIN BOOLEAN
+		= FALSE;
+	  flagF
+		DOMAIN BOOLEAN
+		= FALSE;
+	(*FAILURE*)
+	ATTRIBUTE
+	  aa_success
+		LABEL "success of step %OBJECT"
+		DOMAIN BOOLEAN
+		= FALSE;
+	INTERACTION
+	  mem_S
+		GROUP simu_group
+		STEP propagate_leaves
+		THEN already_S OF closing_valve <-- S OF closing_valve;
+	  prop_req
+		GROUP simu_group
+		STEP propagate_effect_required
+		IF (NOT required OF Waterhammer_attack) OR (NOT S OF
+		  high_pumping_pressure_activation)
+		THEN required OF closing_valve <-- FALSE;
+	  prop_rel
+		GROUP simu_group
+		STEP propagate_effect_required
+		IF relevant_evt OF Waterhammer_attack AND (NOT S OF
+		  Waterhammer_attack)
+		THEN relevant_evt OF closing_valve <-- TRUE;
+	  prop_det
+		GROUP simu_group
+		STEP propagate_effect_detected
+		IF detected OF Waterhammer_attack
+		THEN detected OF closing_valve <-- TRUE;
+	  prop_final
+		GROUP simu_group
+		STEP initialization
+		IF detected OF closing_valve
+		THEN final OF closing_valve <-- TRUE;
+	  fails
+		GROUP simu_group
+		STEP initialization
+		IF aa_success OF closing_valve = TRUE
+		THEN S OF closing_valve <-- TRUE;
+	  define_S
+		GROUP simu_group
+		STEP propagate_effect_S
+		IF (aa_success OF closing_valve = TRUE) AND required OF
+		  closing_valve
+		THEN S OF closing_valve <-- TRUE;
+	OCCURRENCE
+	  success_undetected
+		IF (aa_success OF closing_valve = FALSE) AND (((required OF
+		  closing_valve AND (NOT detected OF closing_valve)) AND (NOT
+		  S OF closing_valve)) AND relevant_evt OF closing_valve)
+		MAY_OCCUR
+		  FAULT aa_success
+		  LABEL "success undetected of step %OBJECT"
+		  DIST EXP (0.8)
+		  INDUCING aa_success OF closing_valve <-- TRUE;
+	  success_detected
+		IF (aa_success OF closing_valve = FALSE) AND (((required OF
+		  closing_valve AND detected OF closing_valve) AND (NOT S OF
+		  closing_valve)) AND relevant_evt OF closing_valve)
+		MAY_OCCUR
+		  FAULT aa_success
+		  LABEL "success detected of step %OBJECT"
+		  DIST EXP (0.8)
+		  INDUCING aa_success OF closing_valve <-- TRUE;
+	  initial_detection
+		IF (((((required OF closing_valve AND (NOT detected OF
+		  closing_valve)) AND relevant_evt OF closing_valve) AND (NOT
+		  flagI OF closing_valve)) AND (NOT S OF closing_valve)) AND
+		  final OF high_pumping_pressure_activation) AND final OF
+		  Waterhammer_attack
+		MAY_OCCUR
+		  TRANSITION no_detectionI
+		  DIST INS (1)
+		  INDUCING flagI OF closing_valve <-- TRUE
+		OR_ELSE
+		  TRANSITION detectionI
+		  LABEL "initial detection of step %OBJECT"
+		  DIST INS (0)
+		  INDUCING detected OF closing_valve <-- TRUE;
+	  ongoing_detection
+		IF ((required OF closing_valve AND (NOT detected OF
+		  closing_valve)) AND relevant_evt OF closing_valve) AND (NOT
+		  S OF closing_valve)
+		MAY_OCCUR
+		  TRANSITION detectionO
+		  LABEL "ongoing detection of step %OBJECT"
+		  DIST EXP (0)
+		  INDUCING detected OF closing_valve <-- TRUE;
+	  final_detection
+		IF (((required OF closing_valve AND (NOT detected OF
+		  closing_valve)) AND relevant_evt OF closing_valve) AND S OF
+		  closing_valve) AND (NOT flagF OF closing_valve)
+		MAY_OCCUR
+		  TRANSITION no_detectionF
+		  DIST INS (1)
+		  INDUCING flagF OF closing_valve <-- TRUE,
+			final OF closing_valve <-- TRUE
+		OR_ELSE
+		  TRANSITION detectionF
+		  LABEL "final detection of step %OBJECT"
+		  DIST INS (0)
+		  INDUCING detected OF closing_valve <-- TRUE,
+			final OF closing_valve <-- TRUE;
+	  a_posteriori_detection
+		IF ((required OF closing_valve AND (NOT detected OF
+		  closing_valve)) AND relevant_evt OF closing_valve) AND S OF
+		  closing_valve
+		MAY_OCCUR
+		  TRANSITION detectionA
+		  LABEL "a posteriori detection of step %OBJECT"
+		  DIST EXP (0)
+		  INDUCING detected OF closing_valve <-- TRUE;
+
+OBJECT communication_channel IS_A i_leaf;
+	INTERFACE
+	  fathers
+		= from_CC from_RTU;
+	ATTRIBUTE
+	  required
+		DOMAIN BOOLEAN
+		REINITIALISATION TRUE;
+	  detected
+		DOMAIN BOOLEAN
+		= FALSE;
+	  final
+		DOMAIN BOOLEAN
+		= FALSE;
+	  already_S
+		DOMAIN BOOLEAN
+		= FALSE;
+	CONSTANT
+	  detection
+		DOMAIN 'disabled' 'global' 'local'
+		= 'disabled';
+	  calculate_required
+		DOMAIN 'fn_fathers_and_trig' 'fn_fathers_opp_trig' 'always_true' 'always_false' 'equal_to_S_trig' 'opposite_to_S_trig'
+		= 'fn_fathers_and_trig';
+	  force_relevant_events
+		DOMAIN BOOLEAN
+		= FALSE;
+	  transmit_relevance
+		DOMAIN BOOLEAN
+		= TRUE;
+	ATTRIBUTE
+	  S
+		LABEL "%OBJECT"
+		DOMAIN BOOLEAN
+		REINITIALISATION FALSE;
+	  relevant_evt
+		DOMAIN BOOLEAN
+		REINITIALISATION FALSE;
+	  waiting_for_rep
+		DOMAIN BOOLEAN
+		= FALSE;
+	CONSTANT
+	  rep_priority
+		DOMAIN INTEGER
+		= 1;
+	  mu
+		DOMAIN REAL
+		= 0.5;
+	  when_to_check
+		DOMAIN 'not_req_to_req' 'req_to_not_req'
+		= 'not_req_to_req';
+	  gamma
+		DOMAIN REAL
+		= 0.0023;
+	  failI_FROZEN
+		DOMAIN BOOLEAN
+		= FALSE;
+	(*FAILURE*)
+	ATTRIBUTE
+	  failI
+		LABEL "instantaneous failure of %OBJECT"
+		DOMAIN BOOLEAN
+		= FALSE;
+	ATTRIBUTE
+	  to_be_fired
+		DOMAIN BOOLEAN
+		REINITIALISATION FALSE;
+	  already_standby
+		DOMAIN BOOLEAN
+		= FALSE;
+	  already_required
+		DOMAIN BOOLEAN
+		= FALSE;
+	INTERACTION
+	  mem_S
+		GROUP simu_group
+		STEP propagate_leaves
+		THEN already_S OF communication_channel <-- S OF
+		  communication_channel;
+	  prop_req
+		GROUP simu_group
+		STEP propagate_effect_required
+		IF (NOT required OF from_CC) AND (NOT required OF from_RTU)
+		THEN required OF communication_channel <-- FALSE;
+	  prop_rel
+		GROUP simu_group
+		STEP propagate_effect_required
+		IF (relevant_evt OF from_CC AND (NOT S OF from_CC)) OR (
+		  relevant_evt OF from_RTU AND (NOT S OF from_RTU))
+		THEN relevant_evt OF communication_channel <-- TRUE;
+	  prop_final
+		GROUP simu_group
+		STEP initialization
+		IF detected OF communication_channel
+		THEN final OF communication_channel <-- TRUE;
+	  fails
+		GROUP simu_group
+		STEP initialization
+		IF failI OF communication_channel = TRUE
+		THEN S OF communication_channel <-- TRUE;
+	  define_S
+		GROUP simu_group
+		STEP propagate_effect_S
+		IF (failI OF communication_channel = TRUE) AND required OF
+		  communication_channel
+		THEN S OF communication_channel <-- TRUE;
+	  get_rep
+		GROUP simu_group
+		STEP propagate_leaves
+		IF (failI OF communication_channel = TRUE) AND waiting_for_rep
+		  OF communication_channel
+		THEN waiting_for_rep OF communication_channel <-- FALSE;
+	  nrtr
+		GROUP simu_group
+		STEP propagate_leaves
+		IF (NOT required OF communication_channel) AND ((NOT
+		  already_standby OF communication_channel) AND (NOT
+		  already_required OF communication_channel))
+		THEN already_standby OF communication_channel <-- TRUE;
+	  to_fire
+		GROUP simu_group
+		STEP tops
+		IF required OF communication_channel AND already_standby OF
+		  communication_channel
+		THEN to_be_fired OF communication_channel <-- TRUE;
+	OCCURRENCE
+	  failureI
+		GROUP simu_group
+		IF (failI OF communication_channel = FALSE) AND (to_be_fired OF
+		  communication_channel AND relevant_evt OF
+		  communication_channel)
+		MAY_OCCUR
+		  FAULT failI
+		  LABEL "instantaneous failure of %OBJECT"
+		  DIST INS (0.0023)
+		  INDUCING failI OF communication_channel <-- TRUE,
+			already_standby OF communication_channel <-- FALSE,
+			already_required OF communication_channel <-- FALSE,
+			waiting_for_rep OF communication_channel <-- TRUE,
+			final OF communication_channel <-- TRUE
+		OR_ELSE
+		  TRANSITION good
+		  DIST INS (0.9977)
+		  INDUCING already_standby OF communication_channel <-- FALSE,
+			already_required OF communication_channel <-- FALSE,
+			final OF communication_channel <-- TRUE;
+	  repairI
+		GROUP simu_group
+		IF (failI OF communication_channel = TRUE) AND (NOT
+		  waiting_for_rep OF communication_channel)
+		MAY_OCCUR
+		  REPAIR rep
+		  DIST EXP (0.5)
+		  INDUCING failI OF communication_channel <-- FALSE,
+			final OF communication_channel <-- FALSE;
+
+OBJECT communication_eavesdropping IS_A aa_leaf;
+	INTERFACE
+	  fathers
+		= protection_system_attack;
+	  triggered_by
+		= access_to_SCADA_system;
+	  triggers
+		= system_modification;
+	ATTRIBUTE
+	  required
+		DOMAIN BOOLEAN
+		REINITIALISATION TRUE;
+	  detected
+		DOMAIN BOOLEAN
+		= FALSE;
+	  final
+		DOMAIN BOOLEAN
+		= FALSE;
+	  already_S
+		DOMAIN BOOLEAN
+		= FALSE;
+	CONSTANT
+	  detection
+		DOMAIN 'disabled' 'global' 'local'
+		= 'global';
+	  calculate_required
+		DOMAIN 'fn_fathers_and_trig' 'fn_fathers_opp_trig' 'always_true' 'always_false' 'equal_to_S_trig' 'opposite_to_S_trig'
+		= 'fn_fathers_and_trig';
+	  force_relevant_events
+		DOMAIN BOOLEAN
+		= FALSE;
+	  transmit_relevance
+		DOMAIN BOOLEAN
+		= TRUE;
+	ATTRIBUTE
+	  S
+		LABEL "%OBJECT"
+		DOMAIN BOOLEAN
+		REINITIALISATION FALSE;
+	  relevant_evt
+		DOMAIN BOOLEAN
+		REINITIALISATION FALSE;
+	CONSTANT
+	  lambda_S_ND
+		DOMAIN REAL
+		= 0.0833;
+	  lambda_S_D
+		DOMAIN REAL
+		= 0.0833;
+	  gamma_D_I
+		DOMAIN REAL
+		= 0;
+	  lambda_D_O
+		DOMAIN REAL
+		= 0;
+	  gamma_D_F
+		DOMAIN REAL
+		= 0;
+	  lambda_D_A
+		DOMAIN REAL
+		= 0;
+	  skill
+		DOMAIN '0' '1' '2' '3' '4'
+		= '0';
+	  insider
+		DOMAIN BOOLEAN
+		= FALSE;
+	  equipment
+		DOMAIN BOOLEAN
+		= FALSE;
+	  cost
+		DOMAIN REAL
+		= 0;
+	ATTRIBUTE
+	  flagI
+		DOMAIN BOOLEAN
+		= FALSE;
+	  flagF
+		DOMAIN BOOLEAN
+		= FALSE;
+	(*FAILURE*)
+	ATTRIBUTE
+	  aa_success
+		LABEL "success of step %OBJECT"
+		DOMAIN BOOLEAN
+		= FALSE;
+	INTERACTION
+	  mem_S
+		GROUP simu_group
+		STEP propagate_leaves
+		THEN already_S OF communication_eavesdropping <-- S OF
+		  communication_eavesdropping;
+	  prop_req
+		GROUP simu_group
+		STEP propagate_effect_required
+		IF (NOT required OF protection_system_attack) OR (NOT S OF
+		  access_to_SCADA_system)
+		THEN required OF communication_eavesdropping <-- FALSE;
+	  prop_rel
+		GROUP simu_group
+		STEP propagate_effect_required
+		IF (relevant_evt OF protection_system_attack AND (NOT S OF
+		  protection_system_attack)) OR (relevant_evt OF
+		  system_modification AND (NOT S OF system_modification))
+		THEN relevant_evt OF communication_eavesdropping <-- TRUE;
+	  prop_det
+		GROUP simu_group
+		STEP propagate_effect_detected
+		IF detected OF protection_system_attack
+		THEN detected OF communication_eavesdropping <-- TRUE;
+	  prop_final
+		GROUP simu_group
+		STEP initialization
+		IF detected OF communication_eavesdropping
+		THEN final OF communication_eavesdropping <-- TRUE;
+	  fails
+		GROUP simu_group
+		STEP initialization
+		IF aa_success OF communication_eavesdropping = TRUE
+		THEN S OF communication_eavesdropping <-- TRUE;
+	  define_S
+		GROUP simu_group
+		STEP propagate_effect_S
+		IF (aa_success OF communication_eavesdropping = TRUE) AND
+		  required OF communication_eavesdropping
+		THEN S OF communication_eavesdropping <-- TRUE;
+	OCCURRENCE
+	  success_undetected
+		IF (aa_success OF communication_eavesdropping = FALSE) AND (((
+		  required OF communication_eavesdropping AND (NOT detected OF
+		  communication_eavesdropping)) AND (NOT S OF
+		  communication_eavesdropping)) AND relevant_evt OF
+		  communication_eavesdropping)
+		MAY_OCCUR
+		  FAULT aa_success
+		  LABEL "success undetected of step %OBJECT"
+		  DIST EXP (0.0833)
+		  INDUCING aa_success OF communication_eavesdropping <-- TRUE;
+	  success_detected
+		IF (aa_success OF communication_eavesdropping = FALSE) AND (((
+		  required OF communication_eavesdropping AND detected OF
+		  communication_eavesdropping) AND (NOT S OF
+		  communication_eavesdropping)) AND relevant_evt OF
+		  communication_eavesdropping)
+		MAY_OCCUR
+		  FAULT aa_success
+		  LABEL "success detected of step %OBJECT"
+		  DIST EXP (0.0833)
+		  INDUCING aa_success OF communication_eavesdropping <-- TRUE;
+	  initial_detection
+		IF (((((required OF communication_eavesdropping AND (NOT
+		  detected OF communication_eavesdropping)) AND relevant_evt
+		  OF communication_eavesdropping) AND (NOT flagI OF
+		  communication_eavesdropping)) AND (NOT S OF
+		  communication_eavesdropping)) AND final OF
+		  access_to_SCADA_system) AND final OF
+		  protection_system_attack
+		MAY_OCCUR
+		  TRANSITION no_detectionI
+		  DIST INS (1)
+		  INDUCING flagI OF communication_eavesdropping <-- TRUE
+		OR_ELSE
+		  TRANSITION detectionI
+		  LABEL "initial detection of step %OBJECT"
+		  DIST INS (0)
+		  INDUCING detected OF communication_eavesdropping <-- TRUE;
+	  ongoing_detection
+		IF ((required OF communication_eavesdropping AND (NOT detected
+		  OF communication_eavesdropping)) AND relevant_evt OF
+		  communication_eavesdropping) AND (NOT S OF
+		  communication_eavesdropping)
+		MAY_OCCUR
+		  TRANSITION detectionO
+		  LABEL "ongoing detection of step %OBJECT"
+		  DIST EXP (0)
+		  INDUCING detected OF communication_eavesdropping <-- TRUE;
+	  final_detection
+		IF (((required OF communication_eavesdropping AND (NOT detected
+		  OF communication_eavesdropping)) AND relevant_evt OF
+		  communication_eavesdropping) AND S OF
+		  communication_eavesdropping) AND (NOT flagF OF
+		  communication_eavesdropping)
+		MAY_OCCUR
+		  TRANSITION no_detectionF
+		  DIST INS (1)
+		  INDUCING flagF OF communication_eavesdropping <-- TRUE,
+			final OF communication_eavesdropping <-- TRUE
+		OR_ELSE
+		  TRANSITION detectionF
+		  LABEL "final detection of step %OBJECT"
+		  DIST INS (0)
+		  INDUCING detected OF communication_eavesdropping <-- TRUE,
+			final OF communication_eavesdropping <-- TRUE;
+	  a_posteriori_detection
+		IF ((required OF communication_eavesdropping AND (NOT detected
+		  OF communication_eavesdropping)) AND relevant_evt OF
+		  communication_eavesdropping) AND S OF
+		  communication_eavesdropping
+		MAY_OCCUR
+		  TRANSITION detectionA
+		  LABEL "a posteriori detection of step %OBJECT"
+		  DIST EXP (0)
+		  INDUCING detected OF communication_eavesdropping <-- TRUE;
+
+OBJECT differents_scenarios IS_A or_gate;
+	INTERFACE
+	  sons
+		= attack_protection_syst_then_pipeline_break pipeline_break_and_protection_failure;
+	  fathers
+		= pollution;
+	ATTRIBUTE
+	  required
+		DOMAIN BOOLEAN
+		REINITIALISATION TRUE;
+	  detected
+		DOMAIN BOOLEAN
+		= FALSE;
+	  final
+		DOMAIN BOOLEAN
+		= FALSE;
+	  already_S
+		DOMAIN BOOLEAN
+		= FALSE;
+	CONSTANT
+	  detection
+		DOMAIN 'disabled' 'global' 'local'
+		= 'global';
+	  calculate_required
+		DOMAIN 'fn_fathers_and_trig' 'fn_fathers_opp_trig' 'always_true' 'always_false' 'equal_to_S_trig' 'opposite_to_S_trig'
+		= 'fn_fathers_and_trig';
+	  force_relevant_events
+		DOMAIN BOOLEAN
+		= FALSE;
+	  transmit_relevance
+		DOMAIN BOOLEAN
+		= TRUE;
+	ATTRIBUTE
+	  S
+		LABEL "%OBJECT"
+		DOMAIN BOOLEAN
+		REINITIALISATION FALSE;
+	  relevant_evt
+		DOMAIN BOOLEAN
+		REINITIALISATION FALSE;
+	INTERACTION
+	  mem_S
+		GROUP simu_group
+		STEP propagate_leaves
+		THEN already_S OF differents_scenarios <-- S OF
+		  differents_scenarios;
+	  prop_req
+		GROUP simu_group
+		STEP propagate_effect_required
+		IF NOT required OF pollution
+		THEN required OF differents_scenarios <-- FALSE;
+	  prop_rel
+		GROUP simu_group
+		STEP propagate_effect_required
+		IF relevant_evt OF pollution AND (NOT S OF pollution)
+		THEN relevant_evt OF differents_scenarios <-- TRUE;
+	  prop_det
+		GROUP simu_group
+		STEP propagate_effect_detected
+		IF (detected OF attack_protection_syst_then_pipeline_break OR
+		  detected OF pipeline_break_and_protection_failure) OR
+		  detected OF pollution
+		THEN detected OF differents_scenarios <-- TRUE;
+	  prop_final
+		GROUP simu_group
+		STEP initialization
+		IF detected OF differents_scenarios
+		THEN final OF differents_scenarios <-- TRUE;
+	  prop_fin
+		GROUP simu_group
+		STEP initialization
+		IF final OF pollution
+		THEN final OF differents_scenarios <-- TRUE;
+	  or
+		GROUP simu_group
+		STEP propagate_effect_S
+		IF (S OF attack_protection_syst_then_pipeline_break AND final
+		  OF attack_protection_syst_then_pipeline_break) OR (S OF
+		  pipeline_break_and_protection_failure AND final OF
+		  pipeline_break_and_protection_failure)
+		THEN S OF differents_scenarios <-- TRUE,
+		  final OF differents_scenarios <-- TRUE;
+
+OBJECT downstream IS_A or_gate;
+	INTERFACE
+	  sons
+		= access_to_CC access_to_communication_link;
+	  fathers
+		= access_to_SCADA_system;
+	  triggers
+		= downstream_falsification;
+	ATTRIBUTE
+	  required
+		DOMAIN BOOLEAN
+		REINITIALISATION TRUE;
+	  detected
+		DOMAIN BOOLEAN
+		= FALSE;
+	  final
+		DOMAIN BOOLEAN
+		= FALSE;
+	  already_S
+		DOMAIN BOOLEAN
+		= FALSE;
+	CONSTANT
+	  detection
+		DOMAIN 'disabled' 'global' 'local'
+		= 'global';
+	  calculate_required
+		DOMAIN 'fn_fathers_and_trig' 'fn_fathers_opp_trig' 'always_true' 'always_false' 'equal_to_S_trig' 'opposite_to_S_trig'
+		= 'fn_fathers_and_trig';
+	  force_relevant_events
+		DOMAIN BOOLEAN
+		= FALSE;
+	  transmit_relevance
+		DOMAIN BOOLEAN
+		= TRUE;
+	ATTRIBUTE
+	  S
+		LABEL "%OBJECT"
+		DOMAIN BOOLEAN
+		REINITIALISATION FALSE;
+	  relevant_evt
+		DOMAIN BOOLEAN
+		REINITIALISATION FALSE;
+	INTERACTION
+	  mem_S
+		GROUP simu_group
+		STEP propagate_leaves
+		THEN already_S OF downstream <-- S OF downstream;
+	  prop_req
+		GROUP simu_group
+		STEP propagate_effect_required
+		IF NOT required OF access_to_SCADA_system
+		THEN required OF downstream <-- FALSE;
+	  prop_rel
+		GROUP simu_group
+		STEP propagate_effect_required
+		IF (relevant_evt OF access_to_SCADA_system AND (NOT S OF
+		  access_to_SCADA_system)) OR (relevant_evt OF
+		  downstream_falsification AND (NOT S OF
+		  downstream_falsification))
+		THEN relevant_evt OF downstream <-- TRUE;
+	  prop_det
+		GROUP simu_group
+		STEP propagate_effect_detected
+		IF (detected OF access_to_CC OR detected OF
+		  access_to_communication_link) OR detected OF
+		  access_to_SCADA_system
+		THEN detected OF downstream <-- TRUE;
+	  prop_final
+		GROUP simu_group
+		STEP initialization
+		IF detected OF downstream
+		THEN final OF downstream <-- TRUE;
+	  prop_fin
+		GROUP simu_group
+		STEP initialization
+		IF final OF access_to_SCADA_system
+		THEN final OF downstream <-- TRUE;
+	  or
+		GROUP simu_group
+		STEP propagate_effect_S
+		IF (S OF access_to_CC AND final OF access_to_CC) OR (S OF
+		  access_to_communication_link AND final OF
+		  access_to_communication_link)
+		THEN S OF downstream <-- TRUE,
+		  final OF downstream <-- TRUE;
+
+OBJECT downstream_falsification IS_A and_gate;
+	INTERFACE
+	  sons
+		= CC_instructions_falsifications reflex_action_desactivation;
+	  fathers
+		= system_modification;
+	  triggered_by
+		= downstream;
+	ATTRIBUTE
+	  required
+		DOMAIN BOOLEAN
+		REINITIALISATION TRUE;
+	  detected
+		DOMAIN BOOLEAN
+		= FALSE;
+	  final
+		DOMAIN BOOLEAN
+		= FALSE;
+	  already_S
+		DOMAIN BOOLEAN
+		= FALSE;
+	CONSTANT
+	  detection
+		DOMAIN 'disabled' 'global' 'local'
+		= 'global';
+	  calculate_required
+		DOMAIN 'fn_fathers_and_trig' 'fn_fathers_opp_trig' 'always_true' 'always_false' 'equal_to_S_trig' 'opposite_to_S_trig'
+		= 'fn_fathers_and_trig';
+	  force_relevant_events
+		DOMAIN BOOLEAN
+		= FALSE;
+	  transmit_relevance
+		DOMAIN BOOLEAN
+		= TRUE;
+	ATTRIBUTE
+	  S
+		LABEL "%OBJECT"
+		DOMAIN BOOLEAN
+		REINITIALISATION FALSE;
+	  relevant_evt
+		DOMAIN BOOLEAN
+		REINITIALISATION FALSE;
+	INTERACTION
+	  mem_S
+		GROUP simu_group
+		STEP propagate_leaves
+		THEN already_S OF downstream_falsification <-- S OF
+		  downstream_falsification;
+	  prop_req
+		GROUP simu_group
+		STEP propagate_effect_required
+		IF (NOT required OF system_modification) OR (NOT S OF
+		  downstream)
+		THEN required OF downstream_falsification <-- FALSE;
+	  prop_rel
+		GROUP simu_group
+		STEP propagate_effect_required
+		IF relevant_evt OF system_modification AND (NOT S OF
+		  system_modification)
+		THEN relevant_evt OF downstream_falsification <-- TRUE;
+	  prop_det
+		GROUP simu_group
+		STEP propagate_effect_detected
+		IF (detected OF CC_instructions_falsifications OR detected OF
+		  reflex_action_desactivation) OR detected OF
+		  system_modification
+		THEN detected OF downstream_falsification <-- TRUE;
+	  prop_final
+		GROUP simu_group
+		STEP initialization
+		IF detected OF downstream_falsification
+		THEN final OF downstream_falsification <-- TRUE;
+	  prop_fin
+		GROUP simu_group
+		STEP initialization
+		IF final OF downstream AND final OF system_modification
+		THEN final OF downstream_falsification <-- TRUE;
+	  and
+		GROUP simu_group
+		STEP propagate_effect_S
+		IF (S OF CC_instructions_falsifications AND final OF
+		  CC_instructions_falsifications) AND (S OF
+		  reflex_action_desactivation AND final OF
+		  reflex_action_desactivation)
+		THEN S OF downstream_falsification <-- TRUE,
+		  final OF downstream_falsification <-- TRUE;
+
+OBJECT faulty_operator IS_A i_leaf;
+	INTERFACE
+	  fathers
+		= from_CC;
+	ATTRIBUTE
+	  required
+		DOMAIN BOOLEAN
+		REINITIALISATION TRUE;
+	  detected
+		DOMAIN BOOLEAN
+		= FALSE;
+	  final
+		DOMAIN BOOLEAN
+		= FALSE;
+	  already_S
+		DOMAIN BOOLEAN
+		= FALSE;
+	CONSTANT
+	  detection
+		DOMAIN 'disabled' 'global' 'local'
+		= 'disabled';
+	  calculate_required
+		DOMAIN 'fn_fathers_and_trig' 'fn_fathers_opp_trig' 'always_true' 'always_false' 'equal_to_S_trig' 'opposite_to_S_trig'
+		= 'fn_fathers_and_trig';
+	  force_relevant_events
+		DOMAIN BOOLEAN
+		= FALSE;
+	  transmit_relevance
+		DOMAIN BOOLEAN
+		= TRUE;
+	ATTRIBUTE
+	  S
+		LABEL "%OBJECT"
+		DOMAIN BOOLEAN
+		REINITIALISATION FALSE;
+	  relevant_evt
+		DOMAIN BOOLEAN
+		REINITIALISATION FALSE;
+	  waiting_for_rep
+		DOMAIN BOOLEAN
+		= FALSE;
+	CONSTANT
+	  rep_priority
+		DOMAIN INTEGER
+		= 1;
+	  mu
+		DOMAIN REAL
+		= 0.9;
+	  when_to_check
+		DOMAIN 'not_req_to_req' 'req_to_not_req'
+		= 'not_req_to_req';
+	  gamma
+		DOMAIN REAL
+		= 0.000257;
+	  failI_FROZEN
+		DOMAIN BOOLEAN
+		= FALSE;
+	(*FAILURE*)
+	ATTRIBUTE
+	  failI
+		LABEL "instantaneous failure of %OBJECT"
+		DOMAIN BOOLEAN
+		= FALSE;
+	ATTRIBUTE
+	  to_be_fired
+		DOMAIN BOOLEAN
+		REINITIALISATION FALSE;
+	  already_standby
+		DOMAIN BOOLEAN
+		= FALSE;
+	  already_required
+		DOMAIN BOOLEAN
+		= FALSE;
+	INTERACTION
+	  mem_S
+		GROUP simu_group
+		STEP propagate_leaves
+		THEN already_S OF faulty_operator <-- S OF faulty_operator;
+	  prop_req
+		GROUP simu_group
+		STEP propagate_effect_required
+		IF NOT required OF from_CC
+		THEN required OF faulty_operator <-- FALSE;
+	  prop_rel
+		GROUP simu_group
+		STEP propagate_effect_required
+		IF relevant_evt OF from_CC AND (NOT S OF from_CC)
+		THEN relevant_evt OF faulty_operator <-- TRUE;
+	  prop_final
+		GROUP simu_group
+		STEP initialization
+		IF detected OF faulty_operator
+		THEN final OF faulty_operator <-- TRUE;
+	  fails
+		GROUP simu_group
+		STEP initialization
+		IF failI OF faulty_operator = TRUE
+		THEN S OF faulty_operator <-- TRUE;
+	  define_S
+		GROUP simu_group
+		STEP propagate_effect_S
+		IF (failI OF faulty_operator = TRUE) AND required OF
+		  faulty_operator
+		THEN S OF faulty_operator <-- TRUE;
+	  get_rep
+		GROUP simu_group
+		STEP propagate_leaves
+		IF (failI OF faulty_operator = TRUE) AND waiting_for_rep OF
+		  faulty_operator
+		THEN waiting_for_rep OF faulty_operator <-- FALSE;
+	  nrtr
+		GROUP simu_group
+		STEP propagate_leaves
+		IF (NOT required OF faulty_operator) AND ((NOT already_standby
+		  OF faulty_operator) AND (NOT already_required OF
+		  faulty_operator))
+		THEN already_standby OF faulty_operator <-- TRUE;
+	  to_fire
+		GROUP simu_group
+		STEP tops
+		IF required OF faulty_operator AND already_standby OF
+		  faulty_operator
+		THEN to_be_fired OF faulty_operator <-- TRUE;
+	OCCURRENCE
+	  failureI
+		GROUP simu_group
+		IF (failI OF faulty_operator = FALSE) AND (to_be_fired OF
+		  faulty_operator AND relevant_evt OF faulty_operator)
+		MAY_OCCUR
+		  FAULT failI
+		  LABEL "instantaneous failure of %OBJECT"
+		  DIST INS (0.000257)
+		  INDUCING failI OF faulty_operator <-- TRUE,
+			already_standby OF faulty_operator <-- FALSE,
+			already_required OF faulty_operator <-- FALSE,
+			waiting_for_rep OF faulty_operator <-- TRUE,
+			final OF faulty_operator <-- TRUE
+		OR_ELSE
+		  TRANSITION good
+		  DIST INS (0.999743)
+		  INDUCING already_standby OF faulty_operator <-- FALSE,
+			already_required OF faulty_operator <-- FALSE,
+			final OF faulty_operator <-- TRUE;
+	  repairI
+		GROUP simu_group
+		IF (failI OF faulty_operator = TRUE) AND (NOT waiting_for_rep
+		  OF faulty_operator)
+		MAY_OCCUR
+		  REPAIR rep
+		  DIST EXP (0.9)
+		  INDUCING failI OF faulty_operator <-- FALSE,
+			final OF faulty_operator <-- FALSE;
+
+OBJECT faulty_sensor_measure IS_A i_leaf;
+	INTERFACE
+	  fathers
+		= from_CC from_RTU;
+	ATTRIBUTE
+	  required
+		DOMAIN BOOLEAN
+		REINITIALISATION TRUE;
+	  detected
+		DOMAIN BOOLEAN
+		= FALSE;
+	  final
+		DOMAIN BOOLEAN
+		= FALSE;
+	  already_S
+		DOMAIN BOOLEAN
+		= FALSE;
+	CONSTANT
+	  detection
+		DOMAIN 'disabled' 'global' 'local'
+		= 'disabled';
+	  calculate_required
+		DOMAIN 'fn_fathers_and_trig' 'fn_fathers_opp_trig' 'always_true' 'always_false' 'equal_to_S_trig' 'opposite_to_S_trig'
+		= 'fn_fathers_and_trig';
+	  force_relevant_events
+		DOMAIN BOOLEAN
+		= FALSE;
+	  transmit_relevance
+		DOMAIN BOOLEAN
+		= TRUE;
+	ATTRIBUTE
+	  S
+		LABEL "%OBJECT"
+		DOMAIN BOOLEAN
+		REINITIALISATION FALSE;
+	  relevant_evt
+		DOMAIN BOOLEAN
+		REINITIALISATION FALSE;
+	  waiting_for_rep
+		DOMAIN BOOLEAN
+		= FALSE;
+	CONSTANT
+	  rep_priority
+		DOMAIN INTEGER
+		= 1;
+	  mu
+		DOMAIN REAL
+		= 0.2;
+	  when_to_check
+		DOMAIN 'not_req_to_req' 'req_to_not_req'
+		= 'not_req_to_req';
+	  gamma
+		DOMAIN REAL
+		= 0.0011;
+	  failI_FROZEN
+		DOMAIN BOOLEAN
+		= FALSE;
+	(*FAILURE*)
+	ATTRIBUTE
+	  failI
+		LABEL "instantaneous failure of %OBJECT"
+		DOMAIN BOOLEAN
+		= FALSE;
+	ATTRIBUTE
+	  to_be_fired
+		DOMAIN BOOLEAN
+		REINITIALISATION FALSE;
+	  already_standby
+		DOMAIN BOOLEAN
+		= FALSE;
+	  already_required
+		DOMAIN BOOLEAN
+		= FALSE;
+	INTERACTION
+	  mem_S
+		GROUP simu_group
+		STEP propagate_leaves
+		THEN already_S OF faulty_sensor_measure <-- S OF
+		  faulty_sensor_measure;
+	  prop_req
+		GROUP simu_group
+		STEP propagate_effect_required
+		IF (NOT required OF from_CC) AND (NOT required OF from_RTU)
+		THEN required OF faulty_sensor_measure <-- FALSE;
+	  prop_rel
+		GROUP simu_group
+		STEP propagate_effect_required
+		IF (relevant_evt OF from_CC AND (NOT S OF from_CC)) OR (
+		  relevant_evt OF from_RTU AND (NOT S OF from_RTU))
+		THEN relevant_evt OF faulty_sensor_measure <-- TRUE;
+	  prop_final
+		GROUP simu_group
+		STEP initialization
+		IF detected OF faulty_sensor_measure
+		THEN final OF faulty_sensor_measure <-- TRUE;
+	  fails
+		GROUP simu_group
+		STEP initialization
+		IF failI OF faulty_sensor_measure = TRUE
+		THEN S OF faulty_sensor_measure <-- TRUE;
+	  define_S
+		GROUP simu_group
+		STEP propagate_effect_S
+		IF (failI OF faulty_sensor_measure = TRUE) AND required OF
+		  faulty_sensor_measure
+		THEN S OF faulty_sensor_measure <-- TRUE;
+	  get_rep
+		GROUP simu_group
+		STEP propagate_leaves
+		IF (failI OF faulty_sensor_measure = TRUE) AND waiting_for_rep
+		  OF faulty_sensor_measure
+		THEN waiting_for_rep OF faulty_sensor_measure <-- FALSE;
+	  nrtr
+		GROUP simu_group
+		STEP propagate_leaves
+		IF (NOT required OF faulty_sensor_measure) AND ((NOT
+		  already_standby OF faulty_sensor_measure) AND (NOT
+		  already_required OF faulty_sensor_measure))
+		THEN already_standby OF faulty_sensor_measure <-- TRUE;
+	  to_fire
+		GROUP simu_group
+		STEP tops
+		IF required OF faulty_sensor_measure AND already_standby OF
+		  faulty_sensor_measure
+		THEN to_be_fired OF faulty_sensor_measure <-- TRUE;
+	OCCURRENCE
+	  failureI
+		GROUP simu_group
+		IF (failI OF faulty_sensor_measure = FALSE) AND (to_be_fired OF
+		  faulty_sensor_measure AND relevant_evt OF
+		  faulty_sensor_measure)
+		MAY_OCCUR
+		  FAULT failI
+		  LABEL "instantaneous failure of %OBJECT"
+		  DIST INS (0.0011)
+		  INDUCING failI OF faulty_sensor_measure <-- TRUE,
+			already_standby OF faulty_sensor_measure <-- FALSE,
+			already_required OF faulty_sensor_measure <-- FALSE,
+			waiting_for_rep OF faulty_sensor_measure <-- TRUE,
+			final OF faulty_sensor_measure <-- TRUE
+		OR_ELSE
+		  TRANSITION good
+		  DIST INS (0.9989)
+		  INDUCING already_standby OF faulty_sensor_measure <-- FALSE,
+			already_required OF faulty_sensor_measure <-- FALSE,
+			final OF faulty_sensor_measure <-- TRUE;
+	  repairI
+		GROUP simu_group
+		IF (failI OF faulty_sensor_measure = TRUE) AND (NOT
+		  waiting_for_rep OF faulty_sensor_measure)
+		MAY_OCCUR
+		  REPAIR rep
+		  DIST EXP (0.2)
+		  INDUCING failI OF faulty_sensor_measure <-- FALSE,
+			final OF faulty_sensor_measure <-- FALSE;
+
+OBJECT first_1 IS_A first_link;
+
+OBJECT from_CC IS_A or_gate;
+	INTERFACE
+	  sons
+		= Control_Center communication_channel faulty_operator faulty_sensor_measure;
+	  fathers
+		= No_instruction;
+	ATTRIBUTE
+	  required
+		DOMAIN BOOLEAN
+		REINITIALISATION TRUE;
+	  detected
+		DOMAIN BOOLEAN
+		= FALSE;
+	  final
+		DOMAIN BOOLEAN
+		= FALSE;
+	  already_S
+		DOMAIN BOOLEAN
+		= FALSE;
+	CONSTANT
+	  detection
+		DOMAIN 'disabled' 'global' 'local'
+		= 'global';
+	  calculate_required
+		DOMAIN 'fn_fathers_and_trig' 'fn_fathers_opp_trig' 'always_true' 'always_false' 'equal_to_S_trig' 'opposite_to_S_trig'
+		= 'fn_fathers_and_trig';
+	  force_relevant_events
+		DOMAIN BOOLEAN
+		= FALSE;
+	  transmit_relevance
+		DOMAIN BOOLEAN
+		= TRUE;
+	ATTRIBUTE
+	  S
+		LABEL "%OBJECT"
+		DOMAIN BOOLEAN
+		REINITIALISATION FALSE;
+	  relevant_evt
+		DOMAIN BOOLEAN
+		REINITIALISATION FALSE;
+	INTERACTION
+	  mem_S
+		GROUP simu_group
+		STEP propagate_leaves
+		THEN already_S OF from_CC <-- S OF from_CC;
+	  prop_req
+		GROUP simu_group
+		STEP propagate_effect_required
+		IF NOT required OF No_instruction
+		THEN required OF from_CC <-- FALSE;
+	  prop_rel
+		GROUP simu_group
+		STEP propagate_effect_required
+		IF relevant_evt OF No_instruction AND (NOT S OF No_instruction)
+		THEN relevant_evt OF from_CC <-- TRUE;
+	  prop_det
+		GROUP simu_group
+		STEP propagate_effect_detected
+		IF detected OF No_instruction
+		THEN detected OF from_CC <-- TRUE;
+	  prop_final
+		GROUP simu_group
+		STEP initialization
+		IF detected OF from_CC
+		THEN final OF from_CC <-- TRUE;
+	  prop_fin
+		GROUP simu_group
+		STEP initialization
+		IF final OF No_instruction
+		THEN final OF from_CC <-- TRUE;
+	  or
+		GROUP simu_group
+		STEP propagate_effect_S
+		IF (((S OF Control_Center AND final OF Control_Center) OR (S OF
+		  communication_channel AND final OF communication_channel))
+		  OR (S OF faulty_operator AND final OF faulty_operator)) OR (
+		  S OF faulty_sensor_measure AND final OF
+		  faulty_sensor_measure)
+		THEN S OF from_CC <-- TRUE,
+		  final OF from_CC <-- TRUE;
+
+OBJECT from_RTU IS_A or_gate;
+	INTERFACE
+	  sons
+		= No_reflex_action RTU communication_channel faulty_sensor_measure;
+	  fathers
+		= No_instruction;
+	ATTRIBUTE
+	  required
+		DOMAIN BOOLEAN
+		REINITIALISATION TRUE;
+	  detected
+		DOMAIN BOOLEAN
+		= FALSE;
+	  final
+		DOMAIN BOOLEAN
+		= FALSE;
+	  already_S
+		DOMAIN BOOLEAN
+		= FALSE;
+	CONSTANT
+	  detection
+		DOMAIN 'disabled' 'global' 'local'
+		= 'global';
+	  calculate_required
+		DOMAIN 'fn_fathers_and_trig' 'fn_fathers_opp_trig' 'always_true' 'always_false' 'equal_to_S_trig' 'opposite_to_S_trig'
+		= 'fn_fathers_and_trig';
+	  force_relevant_events
+		DOMAIN BOOLEAN
+		= FALSE;
+	  transmit_relevance
+		DOMAIN BOOLEAN
+		= TRUE;
+	ATTRIBUTE
+	  S
+		LABEL "%OBJECT"
+		DOMAIN BOOLEAN
+		REINITIALISATION FALSE;
+	  relevant_evt
+		DOMAIN BOOLEAN
+		REINITIALISATION FALSE;
+	INTERACTION
+	  mem_S
+		GROUP simu_group
+		STEP propagate_leaves
+		THEN already_S OF from_RTU <-- S OF from_RTU;
+	  prop_req
+		GROUP simu_group
+		STEP propagate_effect_required
+		IF NOT required OF No_instruction
+		THEN required OF from_RTU <-- FALSE;
+	  prop_rel
+		GROUP simu_group
+		STEP propagate_effect_required
+		IF relevant_evt OF No_instruction AND (NOT S OF No_instruction)
+		THEN relevant_evt OF from_RTU <-- TRUE;
+	  prop_det
+		GROUP simu_group
+		STEP propagate_effect_detected
+		IF detected OF No_instruction
+		THEN detected OF from_RTU <-- TRUE;
+	  prop_final
+		GROUP simu_group
+		STEP initialization
+		IF detected OF from_RTU
+		THEN final OF from_RTU <-- TRUE;
+	  prop_fin
+		GROUP simu_group
+		STEP initialization
+		IF final OF No_instruction
+		THEN final OF from_RTU <-- TRUE;
+	  or
+		GROUP simu_group
+		STEP propagate_effect_S
+		IF (((S OF No_reflex_action AND final OF No_reflex_action) OR (
+		  S OF RTU AND final OF RTU)) OR (S OF communication_channel
+		  AND final OF communication_channel)) OR (S OF
+		  faulty_sensor_measure AND final OF faulty_sensor_measure)
+		THEN S OF from_RTU <-- TRUE,
+		  final OF from_RTU <-- TRUE;
+
+OBJECT high_pumping_pressure_activation IS_A aa_leaf;
+	INTERFACE
+	  fathers
+		= Waterhammer_attack;
+	  triggers
+		= closing_valve;
+	ATTRIBUTE
+	  required
+		DOMAIN BOOLEAN
+		REINITIALISATION TRUE;
+	  detected
+		DOMAIN BOOLEAN
+		= FALSE;
+	  final
+		DOMAIN BOOLEAN
+		= FALSE;
+	  already_S
+		DOMAIN BOOLEAN
+		= FALSE;
+	CONSTANT
+	  detection
+		DOMAIN 'disabled' 'global' 'local'
+		= 'global';
+	  calculate_required
+		DOMAIN 'fn_fathers_and_trig' 'fn_fathers_opp_trig' 'always_true' 'always_false' 'equal_to_S_trig' 'opposite_to_S_trig'
+		= 'fn_fathers_and_trig';
+	  force_relevant_events
+		DOMAIN BOOLEAN
+		= FALSE;
+	  transmit_relevance
+		DOMAIN BOOLEAN
+		= TRUE;
+	ATTRIBUTE
+	  S
+		LABEL "%OBJECT"
+		DOMAIN BOOLEAN
+		REINITIALISATION FALSE;
+	  relevant_evt
+		DOMAIN BOOLEAN
+		REINITIALISATION FALSE;
+	CONSTANT
+	  lambda_S_ND
+		DOMAIN REAL
+		= 0.8;
+	  lambda_S_D
+		DOMAIN REAL
+		= 0.8;
+	  gamma_D_I
+		DOMAIN REAL
+		= 0;
+	  lambda_D_O
+		DOMAIN REAL
+		= 0;
+	  gamma_D_F
+		DOMAIN REAL
+		= 0;
+	  lambda_D_A
+		DOMAIN REAL
+		= 0;
+	  skill
+		DOMAIN '0' '1' '2' '3' '4'
+		= '0';
+	  insider
+		DOMAIN BOOLEAN
+		= FALSE;
+	  equipment
+		DOMAIN BOOLEAN
+		= FALSE;
+	  cost
+		DOMAIN REAL
+		= 0;
+	ATTRIBUTE
+	  flagI
+		DOMAIN BOOLEAN
+		= FALSE;
+	  flagF
+		DOMAIN BOOLEAN
+		= FALSE;
+	(*FAILURE*)
+	ATTRIBUTE
+	  aa_success
+		LABEL "success of step %OBJECT"
+		DOMAIN BOOLEAN
+		= FALSE;
+	INTERACTION
+	  mem_S
+		GROUP simu_group
+		STEP propagate_leaves
+		THEN already_S OF high_pumping_pressure_activation <-- S OF
+		  high_pumping_pressure_activation;
+	  prop_req
+		GROUP simu_group
+		STEP propagate_effect_required
+		IF NOT required OF Waterhammer_attack
+		THEN required OF high_pumping_pressure_activation <-- FALSE;
+	  prop_rel
+		GROUP simu_group
+		STEP propagate_effect_required
+		IF (relevant_evt OF Waterhammer_attack AND (NOT S OF
+		  Waterhammer_attack)) OR (relevant_evt OF closing_valve AND (
+		  NOT S OF closing_valve))
+		THEN relevant_evt OF high_pumping_pressure_activation <-- TRUE;
+	  prop_det
+		GROUP simu_group
+		STEP propagate_effect_detected
+		IF detected OF Waterhammer_attack
+		THEN detected OF high_pumping_pressure_activation <-- TRUE;
+	  prop_final
+		GROUP simu_group
+		STEP initialization
+		IF detected OF high_pumping_pressure_activation
+		THEN final OF high_pumping_pressure_activation <-- TRUE;
+	  fails
+		GROUP simu_group
+		STEP initialization
+		IF aa_success OF high_pumping_pressure_activation = TRUE
+		THEN S OF high_pumping_pressure_activation <-- TRUE;
+	  define_S
+		GROUP simu_group
+		STEP propagate_effect_S
+		IF (aa_success OF high_pumping_pressure_activation = TRUE) AND
+		  required OF high_pumping_pressure_activation
+		THEN S OF high_pumping_pressure_activation <-- TRUE;
+	OCCURRENCE
+	  success_undetected
+		IF (aa_success OF high_pumping_pressure_activation = FALSE) AND
+		  (((required OF high_pumping_pressure_activation AND (NOT
+		  detected OF high_pumping_pressure_activation)) AND (NOT S OF
+		  high_pumping_pressure_activation)) AND relevant_evt OF
+		  high_pumping_pressure_activation)
+		MAY_OCCUR
+		  FAULT aa_success
+		  LABEL "success undetected of step %OBJECT"
+		  DIST EXP (0.8)
+		  INDUCING aa_success OF high_pumping_pressure_activation <--
+			TRUE;
+	  success_detected
+		IF (aa_success OF high_pumping_pressure_activation = FALSE) AND
+		  (((required OF high_pumping_pressure_activation AND detected
+		  OF high_pumping_pressure_activation) AND (NOT S OF
+		  high_pumping_pressure_activation)) AND relevant_evt OF
+		  high_pumping_pressure_activation)
+		MAY_OCCUR
+		  FAULT aa_success
+		  LABEL "success detected of step %OBJECT"
+		  DIST EXP (0.8)
+		  INDUCING aa_success OF high_pumping_pressure_activation <--
+			TRUE;
+	  initial_detection
+		IF ((((required OF high_pumping_pressure_activation AND (NOT
+		  detected OF high_pumping_pressure_activation)) AND
+		  relevant_evt OF high_pumping_pressure_activation) AND (NOT
+		  flagI OF high_pumping_pressure_activation)) AND (NOT S OF
+		  high_pumping_pressure_activation)) AND final OF
+		  Waterhammer_attack
+		MAY_OCCUR
+		  TRANSITION no_detectionI
+		  DIST INS (1)
+		  INDUCING flagI OF high_pumping_pressure_activation <-- TRUE
+		OR_ELSE
+		  TRANSITION detectionI
+		  LABEL "initial detection of step %OBJECT"
+		  DIST INS (0)
+		  INDUCING detected OF high_pumping_pressure_activation <--
+			TRUE;
+	  ongoing_detection
+		IF ((required OF high_pumping_pressure_activation AND (NOT
+		  detected OF high_pumping_pressure_activation)) AND
+		  relevant_evt OF high_pumping_pressure_activation) AND (NOT S
+		  OF high_pumping_pressure_activation)
+		MAY_OCCUR
+		  TRANSITION detectionO
+		  LABEL "ongoing detection of step %OBJECT"
+		  DIST EXP (0)
+		  INDUCING detected OF high_pumping_pressure_activation <--
+			TRUE;
+	  final_detection
+		IF (((required OF high_pumping_pressure_activation AND (NOT
+		  detected OF high_pumping_pressure_activation)) AND
+		  relevant_evt OF high_pumping_pressure_activation) AND S OF
+		  high_pumping_pressure_activation) AND (NOT flagF OF
+		  high_pumping_pressure_activation)
+		MAY_OCCUR
+		  TRANSITION no_detectionF
+		  DIST INS (1)
+		  INDUCING flagF OF high_pumping_pressure_activation <-- TRUE,
+			final OF high_pumping_pressure_activation <-- TRUE
+		OR_ELSE
+		  TRANSITION detectionF
+		  LABEL "final detection of step %OBJECT"
+		  DIST INS (0)
+		  INDUCING detected OF high_pumping_pressure_activation <--
+			TRUE,
+			final OF high_pumping_pressure_activation <-- TRUE;
+	  a_posteriori_detection
+		IF ((required OF high_pumping_pressure_activation AND (NOT
+		  detected OF high_pumping_pressure_activation)) AND
+		  relevant_evt OF high_pumping_pressure_activation) AND S OF
+		  high_pumping_pressure_activation
+		MAY_OCCUR
+		  TRANSITION detectionA
+		  LABEL "a posteriori detection of step %OBJECT"
+		  DIST EXP (0)
+		  INDUCING detected OF high_pumping_pressure_activation <--
+			TRUE;
+
+OBJECT logic_1 IS_A logic_link;
+
+OBJECT logic_12 IS_A logic_link;
+
+OBJECT logic_13_1 IS_A logic_link;
+
+OBJECT logic_14 IS_A logic_link;
+
+OBJECT logic_14_1 IS_A logic_link;
+
+OBJECT logic_15 IS_A logic_link;
+
+OBJECT logic_16 IS_A logic_link;
+
+OBJECT logic_17 IS_A logic_link;
+
+OBJECT logic_1_1 IS_A logic_link;
+
+OBJECT logic_2 IS_A logic_link;
+
+OBJECT logic_2_1 IS_A logic_link;
+
+OBJECT logic_31 IS_A logic_link;
+
+OBJECT logic_32 IS_A logic_link;
+
+OBJECT logic_34 IS_A logic_link;
+
+OBJECT logic_3_1 IS_A logic_link;
+
+OBJECT logic_41 IS_A logic_link;
+
+OBJECT logic_42 IS_A logic_link;
+
+OBJECT logic_43 IS_A logic_link;
+
+OBJECT logic_44 IS_A logic_link;
+
+OBJECT logic_47 IS_A logic_link;
+
+OBJECT logic_49 IS_A logic_link;
+
+OBJECT logic_5 IS_A logic_link;
+
+OBJECT logic_50 IS_A logic_link;
+
+OBJECT logic_55 IS_A logic_link;
+
+OBJECT logic_56 IS_A logic_link;
+
+OBJECT logic_57 IS_A logic_link;
+
+OBJECT logic_58 IS_A logic_link;
+
+OBJECT logic_59 IS_A logic_link;
+
+OBJECT logic_6 IS_A logic_link;
+
+OBJECT logic_60 IS_A logic_link;
+
+OBJECT logic_61 IS_A logic_link;
+
+OBJECT logic_62 IS_A logic_link;
+
+OBJECT logic_63 IS_A logic_link;
+
+OBJECT logic_65 IS_A logic_link;
+
+OBJECT logic_66 IS_A logic_link;
+
+OBJECT logic_67 IS_A logic_link;
+
+OBJECT logic_68 IS_A logic_link;
+
+OBJECT logic_69 IS_A logic_link;
+
+OBJECT logic_6_1 IS_A logic_link;
+
+OBJECT logic_7 IS_A logic_link;
+
+OBJECT logic_8 IS_A logic_link;
+
+OBJECT pipe_break_accidentally IS_A f_leaf;
+	INTERFACE
+	  fathers
+		= pipeline_break;
+	ATTRIBUTE
+	  required
+		DOMAIN BOOLEAN
+		REINITIALISATION TRUE;
+	  detected
+		DOMAIN BOOLEAN
+		= FALSE;
+	  final
+		DOMAIN BOOLEAN
+		= FALSE;
+	  already_S
+		DOMAIN BOOLEAN
+		= FALSE;
+	CONSTANT
+	  detection
+		DOMAIN 'disabled' 'global' 'local'
+		= 'disabled';
+	  calculate_required
+		DOMAIN 'fn_fathers_and_trig' 'fn_fathers_opp_trig' 'always_true' 'always_false' 'equal_to_S_trig' 'opposite_to_S_trig'
+		= 'fn_fathers_and_trig';
+	  force_relevant_events
+		DOMAIN BOOLEAN
+		= FALSE;
+	  transmit_relevance
+		DOMAIN BOOLEAN
+		= TRUE;
+	ATTRIBUTE
+	  S
+		LABEL "%OBJECT"
+		DOMAIN BOOLEAN
+		REINITIALISATION FALSE;
+	  relevant_evt
+		DOMAIN BOOLEAN
+		REINITIALISATION FALSE;
+	  waiting_for_rep
+		DOMAIN BOOLEAN
+		= FALSE;
+	CONSTANT
+	  rep_priority
+		DOMAIN INTEGER
+		= 1;
+	  mu
+		DOMAIN REAL
+		= 0.02;
+	  lambda
+		DOMAIN REAL
+		= 1.14e-05;
+	  failF_FROZEN
+		DOMAIN BOOLEAN
+		= FALSE;
+	(*FAILURE*)
+	ATTRIBUTE
+	  failF
+		LABEL "failure in operation of %OBJECT"
+		DOMAIN BOOLEAN
+		= FALSE;
+	INTERACTION
+	  mem_S
+		GROUP simu_group
+		STEP propagate_leaves
+		THEN already_S OF pipe_break_accidentally <-- S OF
+		  pipe_break_accidentally;
+	  prop_req
+		GROUP simu_group
+		STEP propagate_effect_required
+		IF NOT required OF pipeline_break
+		THEN required OF pipe_break_accidentally <-- FALSE;
+	  prop_rel
+		GROUP simu_group
+		STEP propagate_effect_required
+		IF relevant_evt OF pipeline_break AND (NOT S OF pipeline_break)
+		THEN relevant_evt OF pipe_break_accidentally <-- TRUE;
+	  prop_final
+		GROUP simu_group
+		STEP initialization
+		IF detected OF pipe_break_accidentally
+		THEN final OF pipe_break_accidentally <-- TRUE;
+	  fails
+		GROUP simu_group
+		STEP initialization
+		IF failF OF pipe_break_accidentally = TRUE
+		THEN S OF pipe_break_accidentally <-- TRUE;
+	  define_S
+		GROUP simu_group
+		STEP propagate_effect_S
+		IF (failF OF pipe_break_accidentally = TRUE) AND required OF
+		  pipe_break_accidentally
+		THEN S OF pipe_break_accidentally <-- TRUE;
+	  get_rep
+		GROUP simu_group
+		STEP propagate_leaves
+		IF (failF OF pipe_break_accidentally = TRUE) AND
+		  waiting_for_rep OF pipe_break_accidentally
+		THEN waiting_for_rep OF pipe_break_accidentally <-- FALSE;
+	OCCURRENCE
+	  failureiF
+		GROUP simu_group
+		IF (failF OF pipe_break_accidentally = FALSE) AND (required OF
+		  pipe_break_accidentally AND relevant_evt OF
+		  pipe_break_accidentally)
+		MAY_OCCUR
+		  FAULT failF
+		  LABEL "failure in operation of %OBJECT"
+		  DIST EXP (1.14e-05)
+		  INDUCING failF OF pipe_break_accidentally <-- TRUE,
+			waiting_for_rep OF pipe_break_accidentally <-- TRUE,
+			final OF pipe_break_accidentally <-- TRUE;
+	  repairiF
+		GROUP simu_group
+		IF (failF OF pipe_break_accidentally = TRUE) AND (NOT
+		  waiting_for_rep OF pipe_break_accidentally)
+		MAY_OCCUR
+		  REPAIR rep
+		  DIST EXP (0.02)
+		  INDUCING failF OF pipe_break_accidentally <-- FALSE,
+			final OF pipe_break_accidentally <-- FALSE;
+
+OBJECT pipeline_break IS_A or_gate;
+	INTERFACE
+	  sons
+		= Waterhammer_attack pipe_break_accidentally;
+	  fathers
+		= attack_protection_syst_then_pipeline_break pipeline_break_and_protection_failure;
+	  triggers
+		= protection_failure;
+	ATTRIBUTE
+	  required
+		DOMAIN BOOLEAN
+		REINITIALISATION TRUE;
+	  detected
+		DOMAIN BOOLEAN
+		= FALSE;
+	  final
+		DOMAIN BOOLEAN
+		= FALSE;
+	  already_S
+		DOMAIN BOOLEAN
+		= FALSE;
+	CONSTANT
+	  detection
+		DOMAIN 'disabled' 'global' 'local'
+		= 'global';
+	  calculate_required
+		DOMAIN 'fn_fathers_and_trig' 'fn_fathers_opp_trig' 'always_true' 'always_false' 'equal_to_S_trig' 'opposite_to_S_trig'
+		= 'fn_fathers_and_trig';
+	  force_relevant_events
+		DOMAIN BOOLEAN
+		= FALSE;
+	  transmit_relevance
+		DOMAIN BOOLEAN
+		= TRUE;
+	ATTRIBUTE
+	  S
+		LABEL "%OBJECT"
+		DOMAIN BOOLEAN
+		REINITIALISATION FALSE;
+	  relevant_evt
+		DOMAIN BOOLEAN
+		REINITIALISATION FALSE;
+	INTERACTION
+	  mem_S
+		GROUP simu_group
+		STEP propagate_leaves
+		THEN already_S OF pipeline_break <-- S OF pipeline_break;
+	  prop_req
+		GROUP simu_group
+		STEP propagate_effect_required
+		IF (NOT required OF attack_protection_syst_then_pipeline_break)
+		  AND (NOT required OF pipeline_break_and_protection_failure)
+		THEN required OF pipeline_break <-- FALSE;
+	  prop_rel
+		GROUP simu_group
+		STEP propagate_effect_required
+		IF ((relevant_evt OF attack_protection_syst_then_pipeline_break
+		  AND (NOT S OF attack_protection_syst_then_pipeline_break))
+		  OR (relevant_evt OF pipeline_break_and_protection_failure
+		  AND (NOT S OF pipeline_break_and_protection_failure))) OR (
+		  relevant_evt OF protection_failure AND (NOT S OF
+		  protection_failure))
+		THEN relevant_evt OF pipeline_break <-- TRUE;
+	  prop_det
+		GROUP simu_group
+		STEP propagate_effect_detected
+		IF detected OF Waterhammer_attack OR (detected OF
+		  attack_protection_syst_then_pipeline_break OR detected OF
+		  pipeline_break_and_protection_failure)
+		THEN detected OF pipeline_break <-- TRUE;
+	  prop_final
+		GROUP simu_group
+		STEP initialization
+		IF detected OF pipeline_break
+		THEN final OF pipeline_break <-- TRUE;
+	  prop_fin
+		GROUP simu_group
+		STEP initialization
+		IF final OF attack_protection_syst_then_pipeline_break AND
+		  final OF pipeline_break_and_protection_failure
+		THEN final OF pipeline_break <-- TRUE;
+	  or
+		GROUP simu_group
+		STEP propagate_effect_S
+		IF (S OF Waterhammer_attack AND final OF Waterhammer_attack) OR
+		  (S OF pipe_break_accidentally AND final OF
+		  pipe_break_accidentally)
+		THEN S OF pipeline_break <-- TRUE,
+		  final OF pipeline_break <-- TRUE;
+
+OBJECT pipeline_break_and_protection_failure IS_A and_gate;
+	INTERFACE
+	  sons
+		= pipeline_break protection_failure;
+	  fathers
+		= differents_scenarios;
+	ATTRIBUTE
+	  required
+		DOMAIN BOOLEAN
+		REINITIALISATION TRUE;
+	  detected
+		DOMAIN BOOLEAN
+		= FALSE;
+	  final
+		DOMAIN BOOLEAN
+		= FALSE;
+	  already_S
+		DOMAIN BOOLEAN
+		= FALSE;
+	CONSTANT
+	  detection
+		DOMAIN 'disabled' 'global' 'local'
+		= 'global';
+	  calculate_required
+		DOMAIN 'fn_fathers_and_trig' 'fn_fathers_opp_trig' 'always_true' 'always_false' 'equal_to_S_trig' 'opposite_to_S_trig'
+		= 'fn_fathers_and_trig';
+	  force_relevant_events
+		DOMAIN BOOLEAN
+		= FALSE;
+	  transmit_relevance
+		DOMAIN BOOLEAN
+		= TRUE;
+	ATTRIBUTE
+	  S
+		LABEL "%OBJECT"
+		DOMAIN BOOLEAN
+		REINITIALISATION FALSE;
+	  relevant_evt
+		DOMAIN BOOLEAN
+		REINITIALISATION FALSE;
+	INTERACTION
+	  mem_S
+		GROUP simu_group
+		STEP propagate_leaves
+		THEN already_S OF pipeline_break_and_protection_failure <-- S
+		  OF pipeline_break_and_protection_failure;
+	  prop_req
+		GROUP simu_group
+		STEP propagate_effect_required
+		IF NOT required OF differents_scenarios
+		THEN required OF pipeline_break_and_protection_failure <--
+		  FALSE;
+	  prop_rel
+		GROUP simu_group
+		STEP propagate_effect_required
+		IF relevant_evt OF differents_scenarios AND (NOT S OF
+		  differents_scenarios)
+		THEN relevant_evt OF pipeline_break_and_protection_failure <--
+		  TRUE;
+	  prop_det
+		GROUP simu_group
+		STEP propagate_effect_detected
+		IF (detected OF pipeline_break OR detected OF
+		  protection_failure) OR detected OF differents_scenarios
+		THEN detected OF pipeline_break_and_protection_failure <-- TRUE;
+	  prop_final
+		GROUP simu_group
+		STEP initialization
+		IF detected OF pipeline_break_and_protection_failure
+		THEN final OF pipeline_break_and_protection_failure <-- TRUE;
+	  prop_fin
+		GROUP simu_group
+		STEP initialization
+		IF final OF differents_scenarios
+		THEN final OF pipeline_break_and_protection_failure <-- TRUE;
+	  and
+		GROUP simu_group
+		STEP propagate_effect_S
+		IF (S OF pipeline_break AND final OF pipeline_break) AND (S OF
+		  protection_failure AND final OF protection_failure)
+		THEN S OF pipeline_break_and_protection_failure <-- TRUE,
+		  final OF pipeline_break_and_protection_failure <-- TRUE;
+
+OBJECT pollution IS_A undes_event;
+	INTERFACE
+	  sons
+		= differents_scenarios;
+	ATTRIBUTE
+	  required
+		DOMAIN BOOLEAN
+		REINITIALISATION TRUE;
+	  detected
+		DOMAIN BOOLEAN
+		= FALSE;
+	  final
+		DOMAIN BOOLEAN
+		= TRUE;
+	  already_S
+		DOMAIN BOOLEAN
+		= FALSE;
+	CONSTANT
+	  detection
+		DOMAIN 'disabled' 'global' 'local'
+		= 'global';
+	  calculate_required
+		DOMAIN 'fn_fathers_and_trig' 'fn_fathers_opp_trig' 'always_true' 'always_false' 'equal_to_S_trig' 'opposite_to_S_trig'
+		= 'fn_fathers_and_trig';
+	  force_relevant_events
+		DOMAIN BOOLEAN
+		= TRUE;
+	  transmit_relevance
+		DOMAIN BOOLEAN
+		= TRUE;
+	ATTRIBUTE
+	  S
+		LABEL "%OBJECT"
+		DOMAIN BOOLEAN
+		REINITIALISATION FALSE;
+	  relevant_evt
+		DOMAIN BOOLEAN
+		REINITIALISATION FALSE;
+	INTERACTION
+	  mem_S
+		GROUP simu_group
+		STEP propagate_leaves
+		THEN already_S OF pollution <-- S OF pollution;
+	  prop_rel
+		GROUP simu_group
+		STEP propagate_effect_required
+		THEN relevant_evt OF pollution <-- TRUE;
+	  prop_det
+		GROUP simu_group
+		STEP propagate_effect_detected
+		IF detected OF differents_scenarios
+		THEN detected OF pollution <-- TRUE;
+	  prop_final
+		GROUP simu_group
+		STEP initialization
+		IF detected OF pollution
+		THEN final OF pollution <-- TRUE;
+	  final_S
+		STEP propagate_effect_S
+		IF S OF differents_scenarios
+		THEN S OF pollution <-- TRUE;
+	  final_det
+		STEP propagate_effect_detected
+		IF detected OF differents_scenarios
+		THEN detected OF pollution <-- TRUE;
+
+OBJECT protection_failure IS_A or_gate;
+	INTERFACE
+	  sons
+		= No_instruction On_demand_failure;
+	  fathers
+		= pipeline_break_and_protection_failure;
+	  triggered_by
+		= pipeline_break;
+	ATTRIBUTE
+	  required
+		DOMAIN BOOLEAN
+		REINITIALISATION TRUE;
+	  detected
+		DOMAIN BOOLEAN
+		= FALSE;
+	  final
+		DOMAIN BOOLEAN
+		= FALSE;
+	  already_S
+		DOMAIN BOOLEAN
+		= FALSE;
+	CONSTANT
+	  detection
+		DOMAIN 'disabled' 'global' 'local'
+		= 'global';
+	  calculate_required
+		DOMAIN 'fn_fathers_and_trig' 'fn_fathers_opp_trig' 'always_true' 'always_false' 'equal_to_S_trig' 'opposite_to_S_trig'
+		= 'fn_fathers_and_trig';
+	  force_relevant_events
+		DOMAIN BOOLEAN
+		= FALSE;
+	  transmit_relevance
+		DOMAIN BOOLEAN
+		= TRUE;
+	ATTRIBUTE
+	  S
+		LABEL "%OBJECT"
+		DOMAIN BOOLEAN
+		REINITIALISATION FALSE;
+	  relevant_evt
+		DOMAIN BOOLEAN
+		REINITIALISATION FALSE;
+	INTERACTION
+	  mem_S
+		GROUP simu_group
+		STEP propagate_leaves
+		THEN already_S OF protection_failure <-- S OF
+		  protection_failure;
+	  prop_req
+		GROUP simu_group
+		STEP propagate_effect_required
+		IF (NOT required OF pipeline_break_and_protection_failure) OR (
+		  NOT S OF pipeline_break)
+		THEN required OF protection_failure <-- FALSE;
+	  prop_rel
+		GROUP simu_group
+		STEP propagate_effect_required
+		IF relevant_evt OF pipeline_break_and_protection_failure AND (
+		  NOT S OF pipeline_break_and_protection_failure)
+		THEN relevant_evt OF protection_failure <-- TRUE;
+	  prop_det
+		GROUP simu_group
+		STEP propagate_effect_detected
+		IF (detected OF No_instruction OR detected OF On_demand_failure)
+		   OR detected OF pipeline_break_and_protection_failure
+		THEN detected OF protection_failure <-- TRUE;
+	  prop_final
+		GROUP simu_group
+		STEP initialization
+		IF detected OF protection_failure
+		THEN final OF protection_failure <-- TRUE;
+	  prop_fin
+		GROUP simu_group
+		STEP initialization
+		IF final OF pipeline_break AND final OF
+		  pipeline_break_and_protection_failure
+		THEN final OF protection_failure <-- TRUE;
+	  or
+		GROUP simu_group
+		STEP propagate_effect_S
+		IF (S OF No_instruction AND final OF No_instruction) OR (S OF
+		  On_demand_failure AND final OF On_demand_failure)
+		THEN S OF protection_failure <-- TRUE,
+		  final OF protection_failure <-- TRUE;
+
+OBJECT protection_system_attack IS_A and_gate;
+	INTERFACE
+	  sons
+		= access_to_SCADA_system communication_eavesdropping system_modification;
+	  fathers
+		= attack_protection_syst_then_pipeline_break;
+	  triggered_by
+		= start_attack;
+	  triggers
+		= Waterhammer_attack;
+	ATTRIBUTE
+	  required
+		DOMAIN BOOLEAN
+		REINITIALISATION TRUE;
+	  detected
+		DOMAIN BOOLEAN
+		= FALSE;
+	  final
+		DOMAIN BOOLEAN
+		= FALSE;
+	  already_S
+		DOMAIN BOOLEAN
+		= FALSE;
+	CONSTANT
+	  detection
+		DOMAIN 'disabled' 'global' 'local'
+		= 'global';
+	  calculate_required
+		DOMAIN 'fn_fathers_and_trig' 'fn_fathers_opp_trig' 'always_true' 'always_false' 'equal_to_S_trig' 'opposite_to_S_trig'
+		= 'fn_fathers_and_trig';
+	  force_relevant_events
+		DOMAIN BOOLEAN
+		= FALSE;
+	  transmit_relevance
+		DOMAIN BOOLEAN
+		= TRUE;
+	ATTRIBUTE
+	  S
+		LABEL "%OBJECT"
+		DOMAIN BOOLEAN
+		REINITIALISATION FALSE;
+	  relevant_evt
+		DOMAIN BOOLEAN
+		REINITIALISATION FALSE;
+	INTERACTION
+	  mem_S
+		GROUP simu_group
+		STEP propagate_leaves
+		THEN already_S OF protection_system_attack <-- S OF
+		  protection_system_attack;
+	  prop_req
+		GROUP simu_group
+		STEP propagate_effect_required
+		IF (NOT required OF attack_protection_syst_then_pipeline_break)
+		  OR (NOT S OF start_attack)
+		THEN required OF protection_system_attack <-- FALSE;
+	  prop_rel
+		GROUP simu_group
+		STEP propagate_effect_required
+		IF (relevant_evt OF attack_protection_syst_then_pipeline_break
+		  AND (NOT S OF attack_protection_syst_then_pipeline_break))
+		  OR (relevant_evt OF Waterhammer_attack AND (NOT S OF
+		  Waterhammer_attack))
+		THEN relevant_evt OF protection_system_attack <-- TRUE;
+	  prop_det
+		GROUP simu_group
+		STEP propagate_effect_detected
+		IF ((detected OF access_to_SCADA_system OR detected OF
+		  communication_eavesdropping) OR detected OF
+		  system_modification) OR detected OF
+		  attack_protection_syst_then_pipeline_break
+		THEN detected OF protection_system_attack <-- TRUE;
+	  prop_final
+		GROUP simu_group
+		STEP initialization
+		IF detected OF protection_system_attack
+		THEN final OF protection_system_attack <-- TRUE;
+	  prop_fin
+		GROUP simu_group
+		STEP initialization
+		IF final OF start_attack AND final OF
+		  attack_protection_syst_then_pipeline_break
+		THEN final OF protection_system_attack <-- TRUE;
+	  and
+		GROUP simu_group
+		STEP propagate_effect_S
+		IF ((S OF access_to_SCADA_system AND final OF
+		  access_to_SCADA_system) AND (S OF
+		  communication_eavesdropping AND final OF
+		  communication_eavesdropping)) AND (S OF system_modification
+		  AND final OF system_modification)
+		THEN S OF protection_system_attack <-- TRUE,
+		  final OF protection_system_attack <-- TRUE;
+
+OBJECT pumps_on_demand_failure_to_stop IS_A i_leaf;
+	INTERFACE
+	  fathers
+		= On_demand_failure;
+	  previous
+		= faulty_operator;
+	ATTRIBUTE
+	  required
+		DOMAIN BOOLEAN
+		REINITIALISATION TRUE;
+	  detected
+		DOMAIN BOOLEAN
+		= FALSE;
+	  final
+		DOMAIN BOOLEAN
+		= FALSE;
+	  already_S
+		DOMAIN BOOLEAN
+		= FALSE;
+	CONSTANT
+	  detection
+		DOMAIN 'disabled' 'global' 'local'
+		= 'disabled';
+	  calculate_required
+		DOMAIN 'fn_fathers_and_trig' 'fn_fathers_opp_trig' 'always_true' 'always_false' 'equal_to_S_trig' 'opposite_to_S_trig'
+		= 'fn_fathers_and_trig';
+	  force_relevant_events
+		DOMAIN BOOLEAN
+		= FALSE;
+	  transmit_relevance
+		DOMAIN BOOLEAN
+		= TRUE;
+	ATTRIBUTE
+	  S
+		LABEL "%OBJECT"
+		DOMAIN BOOLEAN
+		REINITIALISATION FALSE;
+	  relevant_evt
+		DOMAIN BOOLEAN
+		REINITIALISATION FALSE;
+	  waiting_for_rep
+		DOMAIN BOOLEAN
+		= FALSE;
+	CONSTANT
+	  rep_priority
+		DOMAIN INTEGER
+		= 1;
+	  mu
+		DOMAIN REAL
+		= 0.15;
+	  when_to_check
+		DOMAIN 'not_req_to_req' 'req_to_not_req'
+		= 'not_req_to_req';
+	  gamma
+		DOMAIN REAL
+		= 1e-05;
+	  failI_FROZEN
+		DOMAIN BOOLEAN
+		= FALSE;
+	(*FAILURE*)
+	ATTRIBUTE
+	  failI
+		LABEL "instantaneous failure of %OBJECT"
+		DOMAIN BOOLEAN
+		= FALSE;
+	ATTRIBUTE
+	  to_be_fired
+		DOMAIN BOOLEAN
+		REINITIALISATION FALSE;
+	  already_standby
+		DOMAIN BOOLEAN
+		= FALSE;
+	  already_required
+		DOMAIN BOOLEAN
+		= FALSE;
+	INTERACTION
+	  mem_S
+		GROUP simu_group
+		STEP propagate_leaves
+		THEN already_S OF pumps_on_demand_failure_to_stop <-- S OF
+		  pumps_on_demand_failure_to_stop;
+	  prop_req
+		GROUP simu_group
+		STEP propagate_effect_required
+		IF NOT required OF On_demand_failure
+		THEN required OF pumps_on_demand_failure_to_stop <-- FALSE;
+	  prop_rel
+		GROUP simu_group
+		STEP propagate_effect_required
+		IF relevant_evt OF On_demand_failure AND (NOT S OF
+		  On_demand_failure)
+		THEN relevant_evt OF pumps_on_demand_failure_to_stop <-- TRUE;
+	  prop_final
+		GROUP simu_group
+		STEP initialization
+		IF detected OF pumps_on_demand_failure_to_stop
+		THEN final OF pumps_on_demand_failure_to_stop <-- TRUE;
+	  fails
+		GROUP simu_group
+		STEP initialization
+		IF failI OF pumps_on_demand_failure_to_stop = TRUE
+		THEN S OF pumps_on_demand_failure_to_stop <-- TRUE;
+	  define_S
+		GROUP simu_group
+		STEP propagate_effect_S
+		IF (failI OF pumps_on_demand_failure_to_stop = TRUE) AND
+		  required OF pumps_on_demand_failure_to_stop
+		THEN S OF pumps_on_demand_failure_to_stop <-- TRUE;
+	  get_rep
+		GROUP simu_group
+		STEP propagate_leaves
+		IF (failI OF pumps_on_demand_failure_to_stop = TRUE) AND
+		  waiting_for_rep OF pumps_on_demand_failure_to_stop
+		THEN waiting_for_rep OF pumps_on_demand_failure_to_stop <--
+		  FALSE;
+	  nrtr
+		GROUP simu_group
+		STEP propagate_leaves
+		IF (NOT required OF pumps_on_demand_failure_to_stop) AND ((NOT
+		  already_standby OF pumps_on_demand_failure_to_stop) AND (NOT
+		  already_required OF pumps_on_demand_failure_to_stop))
+		THEN already_standby OF pumps_on_demand_failure_to_stop <--
+		  TRUE;
+	  to_fire
+		GROUP simu_group
+		STEP tops
+		IF required OF pumps_on_demand_failure_to_stop AND
+		  already_standby OF pumps_on_demand_failure_to_stop
+		THEN to_be_fired OF pumps_on_demand_failure_to_stop <-- TRUE;
+	OCCURRENCE
+	  failureI
+		GROUP simu_group
+		IF (failI OF pumps_on_demand_failure_to_stop = FALSE) AND ((
+		  to_be_fired OF pumps_on_demand_failure_to_stop AND final OF
+		  faulty_operator) AND relevant_evt OF
+		  pumps_on_demand_failure_to_stop)
+		MAY_OCCUR
+		  FAULT failI
+		  LABEL "instantaneous failure of %OBJECT"
+		  DIST INS (1e-05)
+		  INDUCING failI OF pumps_on_demand_failure_to_stop <-- TRUE,
+			already_standby OF pumps_on_demand_failure_to_stop <--
+			FALSE,
+			already_required OF pumps_on_demand_failure_to_stop <--
+			FALSE,
+			waiting_for_rep OF pumps_on_demand_failure_to_stop <--
+			TRUE,
+			final OF pumps_on_demand_failure_to_stop <-- TRUE
+		OR_ELSE
+		  TRANSITION good
+		  DIST INS (0.99999)
+		  INDUCING already_standby OF pumps_on_demand_failure_to_stop
+			<-- FALSE,
+			already_required OF pumps_on_demand_failure_to_stop <--
+			FALSE,
+			final OF pumps_on_demand_failure_to_stop <-- TRUE;
+	  repairI
+		GROUP simu_group
+		IF (failI OF pumps_on_demand_failure_to_stop = TRUE) AND (NOT
+		  waiting_for_rep OF pumps_on_demand_failure_to_stop)
+		MAY_OCCUR
+		  REPAIR rep
+		  DIST EXP (0.15)
+		  INDUCING failI OF pumps_on_demand_failure_to_stop <-- FALSE,
+			final OF pumps_on_demand_failure_to_stop <-- FALSE;
+
+OBJECT reflex_action_desactivated IS_A aa_leaf;
+	INTERFACE
+	  fathers
+		= reflex_action_desactivation;
+	ATTRIBUTE
+	  required
+		DOMAIN BOOLEAN
+		REINITIALISATION TRUE;
+	  detected
+		DOMAIN BOOLEAN
+		= FALSE;
+	  final
+		DOMAIN BOOLEAN
+		= FALSE;
+	  already_S
+		DOMAIN BOOLEAN
+		= FALSE;
+	CONSTANT
+	  detection
+		DOMAIN 'disabled' 'global' 'local'
+		= 'global';
+	  calculate_required
+		DOMAIN 'fn_fathers_and_trig' 'fn_fathers_opp_trig' 'always_true' 'always_false' 'equal_to_S_trig' 'opposite_to_S_trig'
+		= 'fn_fathers_and_trig';
+	  force_relevant_events
+		DOMAIN BOOLEAN
+		= FALSE;
+	  transmit_relevance
+		DOMAIN BOOLEAN
+		= TRUE;
+	ATTRIBUTE
+	  S
+		LABEL "%OBJECT"
+		DOMAIN BOOLEAN
+		REINITIALISATION FALSE;
+	  relevant_evt
+		DOMAIN BOOLEAN
+		REINITIALISATION FALSE;
+	CONSTANT
+	  lambda_S_ND
+		DOMAIN REAL
+		= 0.0667;
+	  lambda_S_D
+		DOMAIN REAL
+		= 0.0667;
+	  gamma_D_I
+		DOMAIN REAL
+		= 0;
+	  lambda_D_O
+		DOMAIN REAL
+		= 0;
+	  gamma_D_F
+		DOMAIN REAL
+		= 0;
+	  lambda_D_A
+		DOMAIN REAL
+		= 0;
+	  skill
+		DOMAIN '0' '1' '2' '3' '4'
+		= '0';
+	  insider
+		DOMAIN BOOLEAN
+		= FALSE;
+	  equipment
+		DOMAIN BOOLEAN
+		= FALSE;
+	  cost
+		DOMAIN REAL
+		= 0;
+	ATTRIBUTE
+	  flagI
+		DOMAIN BOOLEAN
+		= FALSE;
+	  flagF
+		DOMAIN BOOLEAN
+		= FALSE;
+	(*FAILURE*)
+	ATTRIBUTE
+	  aa_success
+		LABEL "success of step %OBJECT"
+		DOMAIN BOOLEAN
+		= FALSE;
+	INTERACTION
+	  mem_S
+		GROUP simu_group
+		STEP propagate_leaves
+		THEN already_S OF reflex_action_desactivated <-- S OF
+		  reflex_action_desactivated;
+	  prop_req
+		GROUP simu_group
+		STEP propagate_effect_required
+		IF NOT required OF reflex_action_desactivation
+		THEN required OF reflex_action_desactivated <-- FALSE;
+	  prop_rel
+		GROUP simu_group
+		STEP propagate_effect_required
+		IF relevant_evt OF reflex_action_desactivation AND (NOT S OF
+		  reflex_action_desactivation)
+		THEN relevant_evt OF reflex_action_desactivated <-- TRUE;
+	  prop_det
+		GROUP simu_group
+		STEP propagate_effect_detected
+		IF detected OF reflex_action_desactivation
+		THEN detected OF reflex_action_desactivated <-- TRUE;
+	  prop_final
+		GROUP simu_group
+		STEP initialization
+		IF detected OF reflex_action_desactivated
+		THEN final OF reflex_action_desactivated <-- TRUE;
+	  fails
+		GROUP simu_group
+		STEP initialization
+		IF aa_success OF reflex_action_desactivated = TRUE
+		THEN S OF reflex_action_desactivated <-- TRUE;
+	  define_S
+		GROUP simu_group
+		STEP propagate_effect_S
+		IF (aa_success OF reflex_action_desactivated = TRUE) AND
+		  required OF reflex_action_desactivated
+		THEN S OF reflex_action_desactivated <-- TRUE;
+	OCCURRENCE
+	  success_undetected
+		IF (aa_success OF reflex_action_desactivated = FALSE) AND (((
+		  required OF reflex_action_desactivated AND (NOT detected OF
+		  reflex_action_desactivated)) AND (NOT S OF
+		  reflex_action_desactivated)) AND relevant_evt OF
+		  reflex_action_desactivated)
+		MAY_OCCUR
+		  FAULT aa_success
+		  LABEL "success undetected of step %OBJECT"
+		  DIST EXP (0.0667)
+		  INDUCING aa_success OF reflex_action_desactivated <-- TRUE;
+	  success_detected
+		IF (aa_success OF reflex_action_desactivated = FALSE) AND (((
+		  required OF reflex_action_desactivated AND detected OF
+		  reflex_action_desactivated) AND (NOT S OF
+		  reflex_action_desactivated)) AND relevant_evt OF
+		  reflex_action_desactivated)
+		MAY_OCCUR
+		  FAULT aa_success
+		  LABEL "success detected of step %OBJECT"
+		  DIST EXP (0.0667)
+		  INDUCING aa_success OF reflex_action_desactivated <-- TRUE;
+	  initial_detection
+		IF ((((required OF reflex_action_desactivated AND (NOT detected
+		  OF reflex_action_desactivated)) AND relevant_evt OF
+		  reflex_action_desactivated) AND (NOT flagI OF
+		  reflex_action_desactivated)) AND (NOT S OF
+		  reflex_action_desactivated)) AND final OF
+		  reflex_action_desactivation
+		MAY_OCCUR
+		  TRANSITION no_detectionI
+		  DIST INS (1)
+		  INDUCING flagI OF reflex_action_desactivated <-- TRUE
+		OR_ELSE
+		  TRANSITION detectionI
+		  LABEL "initial detection of step %OBJECT"
+		  DIST INS (0)
+		  INDUCING detected OF reflex_action_desactivated <-- TRUE;
+	  ongoing_detection
+		IF ((required OF reflex_action_desactivated AND (NOT detected
+		  OF reflex_action_desactivated)) AND relevant_evt OF
+		  reflex_action_desactivated) AND (NOT S OF
+		  reflex_action_desactivated)
+		MAY_OCCUR
+		  TRANSITION detectionO
+		  LABEL "ongoing detection of step %OBJECT"
+		  DIST EXP (0)
+		  INDUCING detected OF reflex_action_desactivated <-- TRUE;
+	  final_detection
+		IF (((required OF reflex_action_desactivated AND (NOT detected
+		  OF reflex_action_desactivated)) AND relevant_evt OF
+		  reflex_action_desactivated) AND S OF
+		  reflex_action_desactivated) AND (NOT flagF OF
+		  reflex_action_desactivated)
+		MAY_OCCUR
+		  TRANSITION no_detectionF
+		  DIST INS (1)
+		  INDUCING flagF OF reflex_action_desactivated <-- TRUE,
+			final OF reflex_action_desactivated <-- TRUE
+		OR_ELSE
+		  TRANSITION detectionF
+		  LABEL "final detection of step %OBJECT"
+		  DIST INS (0)
+		  INDUCING detected OF reflex_action_desactivated <-- TRUE,
+			final OF reflex_action_desactivated <-- TRUE;
+	  a_posteriori_detection
+		IF ((required OF reflex_action_desactivated AND (NOT detected
+		  OF reflex_action_desactivated)) AND relevant_evt OF
+		  reflex_action_desactivated) AND S OF
+		  reflex_action_desactivated
+		MAY_OCCUR
+		  TRANSITION detectionA
+		  LABEL "a posteriori detection of step %OBJECT"
+		  DIST EXP (0)
+		  INDUCING detected OF reflex_action_desactivated <-- TRUE;
+
+OBJECT reflex_action_desactivation IS_A or_gate;
+	INTERFACE
+	  sons
+		= No_reflex_action reflex_action_desactivated;
+	  fathers
+		= downstream_falsification upstream_falsification;
+	ATTRIBUTE
+	  required
+		DOMAIN BOOLEAN
+		REINITIALISATION TRUE;
+	  detected
+		DOMAIN BOOLEAN
+		= FALSE;
+	  final
+		DOMAIN BOOLEAN
+		= FALSE;
+	  already_S
+		DOMAIN BOOLEAN
+		= FALSE;
+	CONSTANT
+	  detection
+		DOMAIN 'disabled' 'global' 'local'
+		= 'global';
+	  calculate_required
+		DOMAIN 'fn_fathers_and_trig' 'fn_fathers_opp_trig' 'always_true' 'always_false' 'equal_to_S_trig' 'opposite_to_S_trig'
+		= 'fn_fathers_and_trig';
+	  force_relevant_events
+		DOMAIN BOOLEAN
+		= FALSE;
+	  transmit_relevance
+		DOMAIN BOOLEAN
+		= TRUE;
+	ATTRIBUTE
+	  S
+		LABEL "%OBJECT"
+		DOMAIN BOOLEAN
+		REINITIALISATION FALSE;
+	  relevant_evt
+		DOMAIN BOOLEAN
+		REINITIALISATION FALSE;
+	INTERACTION
+	  mem_S
+		GROUP simu_group
+		STEP propagate_leaves
+		THEN already_S OF reflex_action_desactivation <-- S OF
+		  reflex_action_desactivation;
+	  prop_req
+		GROUP simu_group
+		STEP propagate_effect_required
+		IF (NOT required OF downstream_falsification) AND (NOT required
+		  OF upstream_falsification)
+		THEN required OF reflex_action_desactivation <-- FALSE;
+	  prop_rel
+		GROUP simu_group
+		STEP propagate_effect_required
+		IF (relevant_evt OF downstream_falsification AND (NOT S OF
+		  downstream_falsification)) OR (relevant_evt OF
+		  upstream_falsification AND (NOT S OF upstream_falsification))
+		THEN relevant_evt OF reflex_action_desactivation <-- TRUE;
+	  prop_det
+		GROUP simu_group
+		STEP propagate_effect_detected
+		IF detected OF reflex_action_desactivated OR (detected OF
+		  downstream_falsification OR detected OF
+		  upstream_falsification)
+		THEN detected OF reflex_action_desactivation <-- TRUE;
+	  prop_final
+		GROUP simu_group
+		STEP initialization
+		IF detected OF reflex_action_desactivation
+		THEN final OF reflex_action_desactivation <-- TRUE;
+	  prop_fin
+		GROUP simu_group
+		STEP initialization
+		IF final OF downstream_falsification AND final OF
+		  upstream_falsification
+		THEN final OF reflex_action_desactivation <-- TRUE;
+	  or
+		GROUP simu_group
+		STEP propagate_effect_S
+		IF (S OF No_reflex_action AND final OF No_reflex_action) OR (S
+		  OF reflex_action_desactivated AND final OF
+		  reflex_action_desactivated)
+		THEN S OF reflex_action_desactivation <-- TRUE,
+		  final OF reflex_action_desactivation <-- TRUE;
+
+OBJECT second_1 IS_A second_link;
+
+OBJECT sensors_measures_falsification IS_A aa_leaf;
+	INTERFACE
+	  fathers
+		= upstream_falsification;
+	  triggers
+		= alarm_signals_removed;
+	ATTRIBUTE
+	  required
+		DOMAIN BOOLEAN
+		REINITIALISATION TRUE;
+	  detected
+		DOMAIN BOOLEAN
+		= FALSE;
+	  final
+		DOMAIN BOOLEAN
+		= FALSE;
+	  already_S
+		DOMAIN BOOLEAN
+		= FALSE;
+	CONSTANT
+	  detection
+		DOMAIN 'disabled' 'global' 'local'
+		= 'global';
+	  calculate_required
+		DOMAIN 'fn_fathers_and_trig' 'fn_fathers_opp_trig' 'always_true' 'always_false' 'equal_to_S_trig' 'opposite_to_S_trig'
+		= 'fn_fathers_and_trig';
+	  force_relevant_events
+		DOMAIN BOOLEAN
+		= FALSE;
+	  transmit_relevance
+		DOMAIN BOOLEAN
+		= TRUE;
+	ATTRIBUTE
+	  S
+		LABEL "%OBJECT"
+		DOMAIN BOOLEAN
+		REINITIALISATION FALSE;
+	  relevant_evt
+		DOMAIN BOOLEAN
+		REINITIALISATION FALSE;
+	CONSTANT
+	  lambda_S_ND
+		DOMAIN REAL
+		= 0.125;
+	  lambda_S_D
+		DOMAIN REAL
+		= 0.125;
+	  gamma_D_I
+		DOMAIN REAL
+		= 0;
+	  lambda_D_O
+		DOMAIN REAL
+		= 0;
+	  gamma_D_F
+		DOMAIN REAL
+		= 0;
+	  lambda_D_A
+		DOMAIN REAL
+		= 0;
+	  skill
+		DOMAIN '0' '1' '2' '3' '4'
+		= '0';
+	  insider
+		DOMAIN BOOLEAN
+		= FALSE;
+	  equipment
+		DOMAIN BOOLEAN
+		= FALSE;
+	  cost
+		DOMAIN REAL
+		= 0;
+	ATTRIBUTE
+	  flagI
+		DOMAIN BOOLEAN
+		= FALSE;
+	  flagF
+		DOMAIN BOOLEAN
+		= FALSE;
+	(*FAILURE*)
+	ATTRIBUTE
+	  aa_success
+		LABEL "success of step %OBJECT"
+		DOMAIN BOOLEAN
+		= FALSE;
+	INTERACTION
+	  mem_S
+		GROUP simu_group
+		STEP propagate_leaves
+		THEN already_S OF sensors_measures_falsification <-- S OF
+		  sensors_measures_falsification;
+	  prop_req
+		GROUP simu_group
+		STEP propagate_effect_required
+		IF NOT required OF upstream_falsification
+		THEN required OF sensors_measures_falsification <-- FALSE;
+	  prop_rel
+		GROUP simu_group
+		STEP propagate_effect_required
+		IF (relevant_evt OF upstream_falsification AND (NOT S OF
+		  upstream_falsification)) OR (relevant_evt OF
+		  alarm_signals_removed AND (NOT S OF alarm_signals_removed))
+		THEN relevant_evt OF sensors_measures_falsification <-- TRUE;
+	  prop_det
+		GROUP simu_group
+		STEP propagate_effect_detected
+		IF detected OF upstream_falsification
+		THEN detected OF sensors_measures_falsification <-- TRUE;
+	  prop_final
+		GROUP simu_group
+		STEP initialization
+		IF detected OF sensors_measures_falsification
+		THEN final OF sensors_measures_falsification <-- TRUE;
+	  fails
+		GROUP simu_group
+		STEP initialization
+		IF aa_success OF sensors_measures_falsification = TRUE
+		THEN S OF sensors_measures_falsification <-- TRUE;
+	  define_S
+		GROUP simu_group
+		STEP propagate_effect_S
+		IF (aa_success OF sensors_measures_falsification = TRUE) AND
+		  required OF sensors_measures_falsification
+		THEN S OF sensors_measures_falsification <-- TRUE;
+	OCCURRENCE
+	  success_undetected
+		IF (aa_success OF sensors_measures_falsification = FALSE) AND ((
+		  (required OF sensors_measures_falsification AND (NOT
+		  detected OF sensors_measures_falsification)) AND (NOT S OF
+		  sensors_measures_falsification)) AND relevant_evt OF
+		  sensors_measures_falsification)
+		MAY_OCCUR
+		  FAULT aa_success
+		  LABEL "success undetected of step %OBJECT"
+		  DIST EXP (0.125)
+		  INDUCING aa_success OF sensors_measures_falsification <--
+			TRUE;
+	  success_detected
+		IF (aa_success OF sensors_measures_falsification = FALSE) AND ((
+		  (required OF sensors_measures_falsification AND detected OF
+		  sensors_measures_falsification) AND (NOT S OF
+		  sensors_measures_falsification)) AND relevant_evt OF
+		  sensors_measures_falsification)
+		MAY_OCCUR
+		  FAULT aa_success
+		  LABEL "success detected of step %OBJECT"
+		  DIST EXP (0.125)
+		  INDUCING aa_success OF sensors_measures_falsification <--
+			TRUE;
+	  initial_detection
+		IF ((((required OF sensors_measures_falsification AND (NOT
+		  detected OF sensors_measures_falsification)) AND
+		  relevant_evt OF sensors_measures_falsification) AND (NOT
+		  flagI OF sensors_measures_falsification)) AND (NOT S OF
+		  sensors_measures_falsification)) AND final OF
+		  upstream_falsification
+		MAY_OCCUR
+		  TRANSITION no_detectionI
+		  DIST INS (1)
+		  INDUCING flagI OF sensors_measures_falsification <-- TRUE
+		OR_ELSE
+		  TRANSITION detectionI
+		  LABEL "initial detection of step %OBJECT"
+		  DIST INS (0)
+		  INDUCING detected OF sensors_measures_falsification <-- TRUE;
+	  ongoing_detection
+		IF ((required OF sensors_measures_falsification AND (NOT
+		  detected OF sensors_measures_falsification)) AND
+		  relevant_evt OF sensors_measures_falsification) AND (NOT S
+		  OF sensors_measures_falsification)
+		MAY_OCCUR
+		  TRANSITION detectionO
+		  LABEL "ongoing detection of step %OBJECT"
+		  DIST EXP (0)
+		  INDUCING detected OF sensors_measures_falsification <-- TRUE;
+	  final_detection
+		IF (((required OF sensors_measures_falsification AND (NOT
+		  detected OF sensors_measures_falsification)) AND
+		  relevant_evt OF sensors_measures_falsification) AND S OF
+		  sensors_measures_falsification) AND (NOT flagF OF
+		  sensors_measures_falsification)
+		MAY_OCCUR
+		  TRANSITION no_detectionF
+		  DIST INS (1)
+		  INDUCING flagF OF sensors_measures_falsification <-- TRUE,
+			final OF sensors_measures_falsification <-- TRUE
+		OR_ELSE
+		  TRANSITION detectionF
+		  LABEL "final detection of step %OBJECT"
+		  DIST INS (0)
+		  INDUCING detected OF sensors_measures_falsification <-- TRUE,
+			final OF sensors_measures_falsification <-- TRUE;
+	  a_posteriori_detection
+		IF ((required OF sensors_measures_falsification AND (NOT
+		  detected OF sensors_measures_falsification)) AND
+		  relevant_evt OF sensors_measures_falsification) AND S OF
+		  sensors_measures_falsification
+		MAY_OCCUR
+		  TRANSITION detectionA
+		  LABEL "a posteriori detection of step %OBJECT"
+		  DIST EXP (0)
+		  INDUCING detected OF sensors_measures_falsification <-- TRUE;
+
+OBJECT start_attack IS_A f_leaf;
+	INTERFACE
+	  triggers
+		= protection_system_attack;
+	ATTRIBUTE
+	  required
+		DOMAIN BOOLEAN
+		REINITIALISATION TRUE;
+	  detected
+		DOMAIN BOOLEAN
+		= FALSE;
+	  final
+		DOMAIN BOOLEAN
+		= FALSE;
+	  already_S
+		DOMAIN BOOLEAN
+		= FALSE;
+	CONSTANT
+	  detection
+		DOMAIN 'disabled' 'global' 'local'
+		= 'disabled';
+	  calculate_required
+		DOMAIN 'fn_fathers_and_trig' 'fn_fathers_opp_trig' 'always_true' 'always_false' 'equal_to_S_trig' 'opposite_to_S_trig'
+		= 'fn_fathers_and_trig';
+	  force_relevant_events
+		DOMAIN BOOLEAN
+		= FALSE;
+	  transmit_relevance
+		DOMAIN BOOLEAN
+		= TRUE;
+	ATTRIBUTE
+	  S
+		LABEL "%OBJECT"
+		DOMAIN BOOLEAN
+		REINITIALISATION FALSE;
+	  relevant_evt
+		DOMAIN BOOLEAN
+		REINITIALISATION FALSE;
+	  waiting_for_rep
+		DOMAIN BOOLEAN
+		= FALSE;
+	CONSTANT
+	  rep_priority
+		DOMAIN INTEGER
+		= 1;
+	  mu
+		DOMAIN REAL
+		= 0;
+	  lambda
+		DOMAIN REAL
+		= 0.3333333;
+	  failF_FROZEN
+		DOMAIN BOOLEAN
+		= FALSE;
+	(*FAILURE*)
+	ATTRIBUTE
+	  failF
+		LABEL "failure in operation of %OBJECT"
+		DOMAIN BOOLEAN
+		= FALSE;
+	INTERACTION
+	  mem_S
+		GROUP simu_group
+		STEP propagate_leaves
+		THEN already_S OF start_attack <-- S OF start_attack;
+	  prop_rel
+		GROUP simu_group
+		STEP propagate_effect_required
+		IF relevant_evt OF protection_system_attack AND (NOT S OF
+		  protection_system_attack)
+		THEN relevant_evt OF start_attack <-- TRUE;
+	  prop_final
+		GROUP simu_group
+		STEP initialization
+		IF detected OF start_attack
+		THEN final OF start_attack <-- TRUE;
+	  fails
+		GROUP simu_group
+		STEP initialization
+		IF failF OF start_attack = TRUE
+		THEN S OF start_attack <-- TRUE;
+	  define_S
+		GROUP simu_group
+		STEP propagate_effect_S
+		IF (failF OF start_attack = TRUE) AND required OF start_attack
+		THEN S OF start_attack <-- TRUE;
+	  get_rep
+		GROUP simu_group
+		STEP propagate_leaves
+		IF (failF OF start_attack = TRUE) AND waiting_for_rep OF
+		  start_attack
+		THEN waiting_for_rep OF start_attack <-- FALSE;
+	OCCURRENCE
+	  failureiF
+		GROUP simu_group
+		IF (failF OF start_attack = FALSE) AND (required OF
+		  start_attack AND relevant_evt OF start_attack)
+		MAY_OCCUR
+		  FAULT failF
+		  LABEL "failure in operation of %OBJECT"
+		  DIST EXP (0.3333333)
+		  INDUCING failF OF start_attack <-- TRUE,
+			waiting_for_rep OF start_attack <-- TRUE,
+			final OF start_attack <-- TRUE;
+	  repairiF
+		GROUP simu_group
+		IF (failF OF start_attack = TRUE) AND (NOT waiting_for_rep OF
+		  start_attack)
+		MAY_OCCUR
+		  REPAIR rep
+		  DIST EXP (0)
+		  INDUCING failF OF start_attack <-- FALSE,
+			final OF start_attack <-- FALSE;
+
+OBJECT system_modification IS_A or_gate;
+	INTERFACE
+	  sons
+		= downstream_falsification upstream_falsification;
+	  fathers
+		= protection_system_attack;
+	  triggered_by
+		= communication_eavesdropping;
+	ATTRIBUTE
+	  required
+		DOMAIN BOOLEAN
+		REINITIALISATION TRUE;
+	  detected
+		DOMAIN BOOLEAN
+		= FALSE;
+	  final
+		DOMAIN BOOLEAN
+		= FALSE;
+	  already_S
+		DOMAIN BOOLEAN
+		= FALSE;
+	CONSTANT
+	  detection
+		DOMAIN 'disabled' 'global' 'local'
+		= 'global';
+	  calculate_required
+		DOMAIN 'fn_fathers_and_trig' 'fn_fathers_opp_trig' 'always_true' 'always_false' 'equal_to_S_trig' 'opposite_to_S_trig'
+		= 'fn_fathers_and_trig';
+	  force_relevant_events
+		DOMAIN BOOLEAN
+		= FALSE;
+	  transmit_relevance
+		DOMAIN BOOLEAN
+		= TRUE;
+	ATTRIBUTE
+	  S
+		LABEL "%OBJECT"
+		DOMAIN BOOLEAN
+		REINITIALISATION FALSE;
+	  relevant_evt
+		DOMAIN BOOLEAN
+		REINITIALISATION FALSE;
+	INTERACTION
+	  mem_S
+		GROUP simu_group
+		STEP propagate_leaves
+		THEN already_S OF system_modification <-- S OF
+		  system_modification;
+	  prop_req
+		GROUP simu_group
+		STEP propagate_effect_required
+		IF (NOT required OF protection_system_attack) OR (NOT S OF
+		  communication_eavesdropping)
+		THEN required OF system_modification <-- FALSE;
+	  prop_rel
+		GROUP simu_group
+		STEP propagate_effect_required
+		IF relevant_evt OF protection_system_attack AND (NOT S OF
+		  protection_system_attack)
+		THEN relevant_evt OF system_modification <-- TRUE;
+	  prop_det
+		GROUP simu_group
+		STEP propagate_effect_detected
+		IF (detected OF downstream_falsification OR detected OF
+		  upstream_falsification) OR detected OF
+		  protection_system_attack
+		THEN detected OF system_modification <-- TRUE;
+	  prop_final
+		GROUP simu_group
+		STEP initialization
+		IF detected OF system_modification
+		THEN final OF system_modification <-- TRUE;
+	  prop_fin
+		GROUP simu_group
+		STEP initialization
+		IF final OF communication_eavesdropping AND final OF
+		  protection_system_attack
+		THEN final OF system_modification <-- TRUE;
+	  or
+		GROUP simu_group
+		STEP propagate_effect_S
+		IF (S OF downstream_falsification AND final OF
+		  downstream_falsification) OR (S OF upstream_falsification
+		  AND final OF upstream_falsification)
+		THEN S OF system_modification <-- TRUE,
+		  final OF system_modification <-- TRUE;
+
+OBJECT t_1 IS_A trigger_link;
+	INTERFACE
+	  target
+		= protection_failure;
+	CONSTANT
+	  trigger_kind
+		DOMAIN 'fn_fathers_and_trig' 'fn_fathers_opp_trig' 'always_true' 'always_false' 'equal_to_S_trig' 'opposite_to_S_trig'
+		= 'fn_fathers_and_trig';
+
+OBJECT t_10 IS_A trigger_link;
+	INTERFACE
+	  target
+		= protection_system_attack;
+	CONSTANT
+	  trigger_kind
+		DOMAIN 'fn_fathers_and_trig' 'fn_fathers_opp_trig' 'always_true' 'always_false' 'equal_to_S_trig' 'opposite_to_S_trig'
+		= 'fn_fathers_and_trig';
+
+OBJECT t_11 IS_A trigger_link;
+	INTERFACE
+	  target
+		= alarm_signals_removed;
+	CONSTANT
+	  trigger_kind
+		DOMAIN 'fn_fathers_and_trig' 'fn_fathers_opp_trig' 'always_true' 'always_false' 'equal_to_S_trig' 'opposite_to_S_trig'
+		= 'fn_fathers_and_trig';
+
+OBJECT t_12 IS_A trigger_link;
+	INTERFACE
+	  target
+		= On_demand_failure;
+	CONSTANT
+	  trigger_kind
+		DOMAIN 'fn_fathers_and_trig' 'fn_fathers_opp_trig' 'always_true' 'always_false' 'equal_to_S_trig' 'opposite_to_S_trig'
+		= 'fn_fathers_opp_trig';
+
+OBJECT t_1_1 IS_A trigger_link;
+	INTERFACE
+	  target
+		= communication_eavesdropping;
+	CONSTANT
+	  trigger_kind
+		DOMAIN 'fn_fathers_and_trig' 'fn_fathers_opp_trig' 'always_true' 'always_false' 'equal_to_S_trig' 'opposite_to_S_trig'
+		= 'fn_fathers_and_trig';
+
+OBJECT t_2 IS_A trigger_link;
+	INTERFACE
+	  target
+		= system_modification;
+	CONSTANT
+	  trigger_kind
+		DOMAIN 'fn_fathers_and_trig' 'fn_fathers_opp_trig' 'always_true' 'always_false' 'equal_to_S_trig' 'opposite_to_S_trig'
+		= 'fn_fathers_and_trig';
+
+OBJECT t_3 IS_A trigger_link;
+	INTERFACE
+	  target
+		= downstream_falsification;
+	CONSTANT
+	  trigger_kind
+		DOMAIN 'fn_fathers_and_trig' 'fn_fathers_opp_trig' 'always_true' 'always_false' 'equal_to_S_trig' 'opposite_to_S_trig'
+		= 'fn_fathers_and_trig';
+
+OBJECT t_4 IS_A trigger_link;
+	INTERFACE
+	  target
+		= Waterhammer_attack;
+	CONSTANT
+	  trigger_kind
+		DOMAIN 'fn_fathers_and_trig' 'fn_fathers_opp_trig' 'always_true' 'always_false' 'equal_to_S_trig' 'opposite_to_S_trig'
+		= 'fn_fathers_and_trig';
+
+OBJECT t_4_1 IS_A trigger_link;
+	INTERFACE
+	  target
+		= upstream_falsification;
+	CONSTANT
+	  trigger_kind
+		DOMAIN 'fn_fathers_and_trig' 'fn_fathers_opp_trig' 'always_true' 'always_false' 'equal_to_S_trig' 'opposite_to_S_trig'
+		= 'fn_fathers_and_trig';
+
+OBJECT t_9 IS_A trigger_link;
+	INTERFACE
+	  target
+		= closing_valve;
+	CONSTANT
+	  trigger_kind
+		DOMAIN 'fn_fathers_and_trig' 'fn_fathers_opp_trig' 'always_true' 'always_false' 'equal_to_S_trig' 'opposite_to_S_trig'
+		= 'fn_fathers_and_trig';
+
+OBJECT upstream IS_A or_gate;
+	INTERFACE
+	  sons
+		= access_to_RTU access_to_communication_link;
+	  fathers
+		= access_to_SCADA_system;
+	  triggers
+		= upstream_falsification;
+	ATTRIBUTE
+	  required
+		DOMAIN BOOLEAN
+		REINITIALISATION TRUE;
+	  detected
+		DOMAIN BOOLEAN
+		= FALSE;
+	  final
+		DOMAIN BOOLEAN
+		= FALSE;
+	  already_S
+		DOMAIN BOOLEAN
+		= FALSE;
+	CONSTANT
+	  detection
+		DOMAIN 'disabled' 'global' 'local'
+		= 'global';
+	  calculate_required
+		DOMAIN 'fn_fathers_and_trig' 'fn_fathers_opp_trig' 'always_true' 'always_false' 'equal_to_S_trig' 'opposite_to_S_trig'
+		= 'fn_fathers_and_trig';
+	  force_relevant_events
+		DOMAIN BOOLEAN
+		= FALSE;
+	  transmit_relevance
+		DOMAIN BOOLEAN
+		= TRUE;
+	ATTRIBUTE
+	  S
+		LABEL "%OBJECT"
+		DOMAIN BOOLEAN
+		REINITIALISATION FALSE;
+	  relevant_evt
+		DOMAIN BOOLEAN
+		REINITIALISATION FALSE;
+	INTERACTION
+	  mem_S
+		GROUP simu_group
+		STEP propagate_leaves
+		THEN already_S OF upstream <-- S OF upstream;
+	  prop_req
+		GROUP simu_group
+		STEP propagate_effect_required
+		IF NOT required OF access_to_SCADA_system
+		THEN required OF upstream <-- FALSE;
+	  prop_rel
+		GROUP simu_group
+		STEP propagate_effect_required
+		IF (relevant_evt OF access_to_SCADA_system AND (NOT S OF
+		  access_to_SCADA_system)) OR (relevant_evt OF
+		  upstream_falsification AND (NOT S OF upstream_falsification))
+		THEN relevant_evt OF upstream <-- TRUE;
+	  prop_det
+		GROUP simu_group
+		STEP propagate_effect_detected
+		IF (detected OF access_to_RTU OR detected OF
+		  access_to_communication_link) OR detected OF
+		  access_to_SCADA_system
+		THEN detected OF upstream <-- TRUE;
+	  prop_final
+		GROUP simu_group
+		STEP initialization
+		IF detected OF upstream
+		THEN final OF upstream <-- TRUE;
+	  prop_fin
+		GROUP simu_group
+		STEP initialization
+		IF final OF access_to_SCADA_system
+		THEN final OF upstream <-- TRUE;
+	  or
+		GROUP simu_group
+		STEP propagate_effect_S
+		IF (S OF access_to_RTU AND final OF access_to_RTU) OR (S OF
+		  access_to_communication_link AND final OF
+		  access_to_communication_link)
+		THEN S OF upstream <-- TRUE,
+		  final OF upstream <-- TRUE;
+
+OBJECT upstream_falsification IS_A and_gate;
+	INTERFACE
+	  sons
+		= alarm_signals_removed reflex_action_desactivation sensors_measures_falsification;
+	  fathers
+		= system_modification;
+	  triggered_by
+		= upstream;
+	ATTRIBUTE
+	  required
+		DOMAIN BOOLEAN
+		REINITIALISATION TRUE;
+	  detected
+		DOMAIN BOOLEAN
+		= FALSE;
+	  final
+		DOMAIN BOOLEAN
+		= FALSE;
+	  already_S
+		DOMAIN BOOLEAN
+		= FALSE;
+	CONSTANT
+	  detection
+		DOMAIN 'disabled' 'global' 'local'
+		= 'global';
+	  calculate_required
+		DOMAIN 'fn_fathers_and_trig' 'fn_fathers_opp_trig' 'always_true' 'always_false' 'equal_to_S_trig' 'opposite_to_S_trig'
+		= 'fn_fathers_and_trig';
+	  force_relevant_events
+		DOMAIN BOOLEAN
+		= FALSE;
+	  transmit_relevance
+		DOMAIN BOOLEAN
+		= TRUE;
+	ATTRIBUTE
+	  S
+		LABEL "%OBJECT"
+		DOMAIN BOOLEAN
+		REINITIALISATION FALSE;
+	  relevant_evt
+		DOMAIN BOOLEAN
+		REINITIALISATION FALSE;
+	INTERACTION
+	  mem_S
+		GROUP simu_group
+		STEP propagate_leaves
+		THEN already_S OF upstream_falsification <-- S OF
+		  upstream_falsification;
+	  prop_req
+		GROUP simu_group
+		STEP propagate_effect_required
+		IF (NOT required OF system_modification) OR (NOT S OF upstream)
+		THEN required OF upstream_falsification <-- FALSE;
+	  prop_rel
+		GROUP simu_group
+		STEP propagate_effect_required
+		IF relevant_evt OF system_modification AND (NOT S OF
+		  system_modification)
+		THEN relevant_evt OF upstream_falsification <-- TRUE;
+	  prop_det
+		GROUP simu_group
+		STEP propagate_effect_detected
+		IF ((detected OF alarm_signals_removed OR detected OF
+		  reflex_action_desactivation) OR detected OF
+		  sensors_measures_falsification) OR detected OF
+		  system_modification
+		THEN detected OF upstream_falsification <-- TRUE;
+	  prop_final
+		GROUP simu_group
+		STEP initialization
+		IF detected OF upstream_falsification
+		THEN final OF upstream_falsification <-- TRUE;
+	  prop_fin
+		GROUP simu_group
+		STEP initialization
+		IF final OF upstream AND final OF system_modification
+		THEN final OF upstream_falsification <-- TRUE;
+	  and
+		GROUP simu_group
+		STEP propagate_effect_S
+		IF ((S OF alarm_signals_removed AND final OF
+		  alarm_signals_removed) AND (S OF reflex_action_desactivation
+		  AND final OF reflex_action_desactivation)) AND (S OF
+		  sensors_measures_falsification AND final OF
+		  sensors_measures_falsification)
+		THEN S OF upstream_falsification <-- TRUE,
+		  final OF upstream_falsification <-- TRUE;
+
+OBJECT valves_on_demand_failure_to_close IS_A i_leaf;
+	INTERFACE
+	  fathers
+		= On_demand_failure;
+	  previous
+		= faulty_operator;
+	ATTRIBUTE
+	  required
+		DOMAIN BOOLEAN
+		REINITIALISATION TRUE;
+	  detected
+		DOMAIN BOOLEAN
+		= FALSE;
+	  final
+		DOMAIN BOOLEAN
+		= FALSE;
+	  already_S
+		DOMAIN BOOLEAN
+		= FALSE;
+	CONSTANT
+	  detection
+		DOMAIN 'disabled' 'global' 'local'
+		= 'disabled';
+	  calculate_required
+		DOMAIN 'fn_fathers_and_trig' 'fn_fathers_opp_trig' 'always_true' 'always_false' 'equal_to_S_trig' 'opposite_to_S_trig'
+		= 'fn_fathers_and_trig';
+	  force_relevant_events
+		DOMAIN BOOLEAN
+		= FALSE;
+	  transmit_relevance
+		DOMAIN BOOLEAN
+		= TRUE;
+	ATTRIBUTE
+	  S
+		LABEL "%OBJECT"
+		DOMAIN BOOLEAN
+		REINITIALISATION FALSE;
+	  relevant_evt
+		DOMAIN BOOLEAN
+		REINITIALISATION FALSE;
+	  waiting_for_rep
+		DOMAIN BOOLEAN
+		= FALSE;
+	CONSTANT
+	  rep_priority
+		DOMAIN INTEGER
+		= 1;
+	  mu
+		DOMAIN REAL
+		= 0.15;
+	  when_to_check
+		DOMAIN 'not_req_to_req' 'req_to_not_req'
+		= 'not_req_to_req';
+	  gamma
+		DOMAIN REAL
+		= 5e-05;
+	  failI_FROZEN
+		DOMAIN BOOLEAN
+		= FALSE;
+	(*FAILURE*)
+	ATTRIBUTE
+	  failI
+		LABEL "instantaneous failure of %OBJECT"
+		DOMAIN BOOLEAN
+		= FALSE;
+	ATTRIBUTE
+	  to_be_fired
+		DOMAIN BOOLEAN
+		REINITIALISATION FALSE;
+	  already_standby
+		DOMAIN BOOLEAN
+		= FALSE;
+	  already_required
+		DOMAIN BOOLEAN
+		= FALSE;
+	INTERACTION
+	  mem_S
+		GROUP simu_group
+		STEP propagate_leaves
+		THEN already_S OF valves_on_demand_failure_to_close <-- S OF
+		  valves_on_demand_failure_to_close;
+	  prop_req
+		GROUP simu_group
+		STEP propagate_effect_required
+		IF NOT required OF On_demand_failure
+		THEN required OF valves_on_demand_failure_to_close <-- FALSE;
+	  prop_rel
+		GROUP simu_group
+		STEP propagate_effect_required
+		IF relevant_evt OF On_demand_failure AND (NOT S OF
+		  On_demand_failure)
+		THEN relevant_evt OF valves_on_demand_failure_to_close <-- TRUE;
+	  prop_final
+		GROUP simu_group
+		STEP initialization
+		IF detected OF valves_on_demand_failure_to_close
+		THEN final OF valves_on_demand_failure_to_close <-- TRUE;
+	  fails
+		GROUP simu_group
+		STEP initialization
+		IF failI OF valves_on_demand_failure_to_close = TRUE
+		THEN S OF valves_on_demand_failure_to_close <-- TRUE;
+	  define_S
+		GROUP simu_group
+		STEP propagate_effect_S
+		IF (failI OF valves_on_demand_failure_to_close = TRUE) AND
+		  required OF valves_on_demand_failure_to_close
+		THEN S OF valves_on_demand_failure_to_close <-- TRUE;
+	  get_rep
+		GROUP simu_group
+		STEP propagate_leaves
+		IF (failI OF valves_on_demand_failure_to_close = TRUE) AND
+		  waiting_for_rep OF valves_on_demand_failure_to_close
+		THEN waiting_for_rep OF valves_on_demand_failure_to_close <--
+		  FALSE;
+	  nrtr
+		GROUP simu_group
+		STEP propagate_leaves
+		IF (NOT required OF valves_on_demand_failure_to_close) AND ((
+		  NOT already_standby OF valves_on_demand_failure_to_close)
+		  AND (NOT already_required OF
+		  valves_on_demand_failure_to_close))
+		THEN already_standby OF valves_on_demand_failure_to_close <--
+		  TRUE;
+	  to_fire
+		GROUP simu_group
+		STEP tops
+		IF required OF valves_on_demand_failure_to_close AND
+		  already_standby OF valves_on_demand_failure_to_close
+		THEN to_be_fired OF valves_on_demand_failure_to_close <-- TRUE;
+	OCCURRENCE
+	  failureI
+		GROUP simu_group
+		IF (failI OF valves_on_demand_failure_to_close = FALSE) AND ((
+		  to_be_fired OF valves_on_demand_failure_to_close AND final
+		  OF faulty_operator) AND relevant_evt OF
+		  valves_on_demand_failure_to_close)
+		MAY_OCCUR
+		  FAULT failI
+		  LABEL "instantaneous failure of %OBJECT"
+		  DIST INS (5e-05)
+		  INDUCING failI OF valves_on_demand_failure_to_close <-- TRUE,
+			already_standby OF valves_on_demand_failure_to_close <--
+			FALSE,
+			already_required OF valves_on_demand_failure_to_close <--
+			FALSE,
+			waiting_for_rep OF valves_on_demand_failure_to_close <--
+			TRUE,
+			final OF valves_on_demand_failure_to_close <-- TRUE
+		OR_ELSE
+		  TRANSITION good
+		  DIST INS (0.99995)
+		  INDUCING already_standby OF valves_on_demand_failure_to_close
+			<-- FALSE,
+			already_required OF valves_on_demand_failure_to_close <--
+			FALSE,
+			final OF valves_on_demand_failure_to_close <-- TRUE;
+	  repairI
+		GROUP simu_group
+		IF (failI OF valves_on_demand_failure_to_close = TRUE) AND (NOT
+		  waiting_for_rep OF valves_on_demand_failure_to_close)
+		MAY_OCCUR
+		  REPAIR rep
+		  DIST EXP (0.15)
+		  INDUCING failI OF valves_on_demand_failure_to_close <--
+			FALSE,
+			final OF valves_on_demand_failure_to_close <-- FALSE;
+
+OBJECT __ARBRE__EIRM IS_A FIGARO;
+	CONSTANT
+	  Profil1
+		DOMAIN BOOLEAN
+		= TRUE;
+	  no_repair
+		DOMAIN BOOLEAN
+		= FALSE;
+
