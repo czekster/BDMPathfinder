@@ -64,6 +64,14 @@ The tool executes a Perl script and calls YAMS as a Command Line Interface (CLI)
 YAMS generates an XML file that is processed by the tool to compute the attack path probabilities.
 BDMPathfinder then creates an RStudio script with all paths over the mission duration (see property `DURATION` below).
 
+Here is a list of steps performed by the tool for processing the Figaro0 file and generating the probability paths:
+1. From a base model, the scenario builder scripts creates as many new models as required by the parameter variation (set in the variable ``%parameters`` in the Perl script ``bdmp-scenario-builder.pl``)
+2. For each DURATION (from 1 to the value set in the property), and for each model, it calls YAMS for this duration
+3. YAMS generates a list of paths and probabilities for this specific duration. The script saves all the paths, for this duration, and assigns its computed probability
+4. This process iterates over all durations and all files, so, in the end, BDMPathfinder will have a data structure comprised of all generated paths by YAMS, and its probability
+5. The final stage is to generate an R script for all paths, that shows the probability, as described by the figure presented here
+
+
 ## Properties
 Set up a few properties in a properties file (you can choose the name and use it as parameter for 'bdmp-scenario-builder.pl' (use '#' to commenting lines).
 The file below 'looks odd' just to show modellers the use of properties, and how lenient the parser will behave to extract actual (useful) parameters from this file.
