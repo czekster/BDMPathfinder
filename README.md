@@ -12,10 +12,14 @@ BDMPathfinder runs (and was extensively tested) on MS-Windows.
 
 - To build a BDMP model: install Lloyd's Register [RiskSpectrum ModelBuilder (RSMB)](https://www.lr.org/en-gb/riskspectrum/technical-information/modelbuilder/) -- tested with version 2.0.0.11 (March/2021) -- this tool runs on MS-Windows only;
   - it is worth mentioning that this tool is **proprietary**;
+   - **You will have to ask for an Evaluation License (or buy the tool), then download and install it**
 - [Perl](https://www.perl.org/get.html) (tested in version 5.28);
+   - **You will have to download and install it**
 - [Yet Another Monte Carlo Simulator (YAMS)](https://sourceforge.net/projects/visualfigaro/files/YAMS/) version 2.0.3.1 (for MS-Windows).
   - YAMS is **free**, but _not open source_
+   - **This tool is shipped with BDMPathfinder**
 - [RStudio](https://www.rstudio.com/products/rstudio/download/) version 1.4.1106 (multi-platform tool).
+   - **You will have to download and install it**
 
 You may use [Visual Figaro](https://sourceforge.net/projects/visualfigaro/) to open and work with FIGARO files using jEdit.
 
