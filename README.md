@@ -63,9 +63,9 @@ The file below 'looks odd' just to show modellers the use of properties, and how
 ```# use this for commenting lines
 WORKING-PATH    = C://temp//BDMPathfinder # **CHANGE HERE** - USE MS-Windows PATH style
 #duration of the simulation (mission time)
-DURATION        = 24            # scale is 'hours'
+DURATION        = 6            # scale is 'hours'
        
-PROB-THRESHOLD  = 0.7           # probability threshold
+PROB-THRESHOLD  = 0.8           # probability threshold
   # options for new plots
 PLOT-X-TICS     = 1             # xtics parameter in the plot
 PLOT-Y-TICS     = 0.01          # ytics
