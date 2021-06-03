@@ -69,6 +69,9 @@ TOP-PATHS       = 0             # discover top N paths ** if TOP-PATHS > 0, then
 VERBOSE         = 0             # shows output as they are computed
 ```
 
+## Example: casestudy1
+[Click here to open casestudy1.png](https://github.com/czekster/BDMPathfinder/blob/main/casestudy1-results.png)
+
 ## Case studies and examples
 [Click here for case studies and examples](case-studies.md)
 
