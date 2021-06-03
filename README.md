@@ -70,7 +70,7 @@ VERBOSE         = 0             # shows output as they are computed
 ```
 
 ## Example: casestudy1
-[Click here to open casestudy1.png](https://github.com/czekster/BDMPathfinder/blob/main/casestudy1-results.png)
+[Click here to open casestudy2-markings results](https://github.com/czekster/BDMPathfinder/blob/main/casestudy2-markings_results.png)
 
 ## Case studies and examples
 [Click here for case studies and examples](case-studies.md)
