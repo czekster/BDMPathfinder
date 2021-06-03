@@ -117,6 +117,9 @@ And that's it, now you can analyse the path probabilities for BDMP models over t
 
 Authors are funded by the Industrial Strategy Challenge Fund and EPSRC, [EP/V012053/1](https://gow.epsrc.ukri.org/NGBOViewGrant.aspx?GrantRef=EP/V012053/1), [Active Building Centre Research Programme (ABC RP)](https://abc-rp.com/).
 
+## Acknowledgements
+
+We thank Dr Marc Bouissou (EDF) for valuable discussions about BDMP modelling and toolchains.
 
 ## Corresponding author
 Any problem that you may encounter, please drop me an e-mail!
