@@ -1,5 +1,6 @@
 # BDMPathfinder
 A tool for analysing attack paths in BDMP (Boolean logic Driven Markov Processes) models.
+Look also at the [Wiki page](https://github.com/czekster/BDMPathfinder/wiki) for latest news on the tool.
 
 ## Disclaimer
 We stress the fact the BDMPathfinder tool is a **prototype** -- it has not being implemented with any kind of performance mindset.
