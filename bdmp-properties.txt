@@ -1,9 +1,9 @@
 # use this for commenting lines
 WORKING-PATH    = C://Users//stout//Desktop//BDMPathfinder-GitClone # **CHANGE HERE** - USE MS-Windows PATH style - this will set the correct path for the RStudio script!!
 #duration of the simulation (mission time)
-DURATION        = 1            # scale is 'hours'
+DURATION        = 6            # scale is 'hours'
        
-PROB-THRESHOLD  = 0.5           # probability threshold
+PROB-THRESHOLD  = 0.8           # probability threshold
   # options for new plots
 PLOT-X-TICS     = 1             # xtics parameter in the plot
 PLOT-Y-TICS     = 0.01          # ytics

@@ -82,7 +82,7 @@ Before running this, install RStudio (latest version), and Perl.
 
 Steps to run the case study (the tool was tested in MS-Windows 10, but will run on GNU/Linux without any significant changes):
 1. Clone the repository at GitHub - [https://github.com/czekster/BDMPathfinder](https://github.com/czekster/BDMPathfinder)
-2. Run the Command Line Interface (command.exe)
+2. Run the Command Line Interface (on MS-Windows, it is the `command.exe` tool)
 3. Go to the folder where you clone the GitHub repository (mine is `C:\Users\stout\Desktop\BDMPathfinder-GitClone`)
 4. Edit the properties file to adjust to your configuration and parameters (file is `bdmp-properties.txt`, but you could create any other from this one and then pass it as argument to `bdmp-run-all.pl` script)
    - Note: I used the property `DURATION=6` (eg, simulating six hours), for the actual figure, you should put `DURATION=96` here! *I stress that it will take several hours to complete.*
@@ -93,11 +93,14 @@ Steps to run the case study (the tool was tested in MS-Windows 10, but will run 
 6. Run the Perl script that runs YAMS as many scenarios that are present in the new folder, for the parameters set in the properties file `bdmp-properties.txt`
    - Command: `perl bdmp-run-all.pl models_/casestudy2-markings03-06-2021_09-52-13 bdmp-properties.txt`
 7. Run RStudio, open file `models_/casestudy2-markings03-06-2021_09-52-13/script.R`
-   - Run the full script (eg, select all with CTRL-A, then hit ALT-RETURN) - it will generate the multi-scenario graph for six hour of simulation time (see note on step 4)
+   - Run the full script (eg, select all with CTRL-A, then hit ALT-RETURN)
+   - It will generate the multi-scenario graph for six hour of simulation time (see note on step 4)
 
 And that's it, now you can analyse the path probabilities for BDMP models over time, for multiple parameters for the attack leaves!
 
 ## Corresponding author
+Any problem that you may encounter, please drop me an e-mail!
+
 Ricardo M. Czekster -- rczekster at gmail com
 
 
