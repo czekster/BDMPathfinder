@@ -81,7 +81,7 @@ This case study runs the multiple scenario analysis (generating a folder with as
 Before running this, install RStudio (latest version), and Perl.
 
 Steps to run the case study (the tool was tested in MS-Windows 10, but will run on GNU/Linux without any significant changes):
-1. Clone the repository at GitHub - (https://github.com/czekster/BDMPathfinder)[https://github.com/czekster/BDMPathfinder]
+1. Clone the repository at GitHub - [https://github.com/czekster/BDMPathfinder](https://github.com/czekster/BDMPathfinder)
 2. Run the Command Line Interface (command.exe)
 3. Go to the folder where you clone the GitHub repository (mine is `C:\Users\stout\Desktop\BDMPathfinder-GitClone`)
 4. Edit the properties file to adjust to your configuration and parameters (file is `bdmp-properties.txt`, but you could create any other from this one and then pass it as argument to `bdmp-run-all.pl` script)
