@@ -87,7 +87,7 @@ This case study runs the multiple scenario analysis (generating a folder with as
 ## Running the case study - reproduce the results!
 Before running this, install RStudio (latest version), and Perl.
 
-Steps to run the case study (the tool was tested in MS-Windows 10, but will run on GNU/Linux without any significant changes):
+Steps to run the case study (the tool was tested in MS-Windows 10 - RSMB is bound to this platform, however, our script will take the Figaro0 file and run on GNU/Linux without any problem):
 1. Clone the repository at GitHub - [https://github.com/czekster/BDMPathfinder](https://github.com/czekster/BDMPathfinder)
 2. Run the Command Line Interface (on MS-Windows, it is the `command.exe` tool)
 3. Go to the folder where you clone the GitHub repository (mine is `C:\Users\stout\Desktop\BDMPathfinder-GitClone`)
