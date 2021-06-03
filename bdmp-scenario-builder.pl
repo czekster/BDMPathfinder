@@ -48,6 +48,8 @@ my %messages = (
 my $file = $ARGV[0];
 my $rootfile = $file;
 $rootfile =~ s/.fi//g;
+my $fullpath = $rootfile;
+$rootfile = substr($rootfile, rindex($rootfile,"/")+1, length($rootfile)-rindex($rootfile,"/")-1);
 
 my $SECONDS = 3600;  # total of seconds in one hour (main scale)
 
@@ -70,9 +72,9 @@ my %parameters = (   # model in HOURS, e.g., for 777 there is two possibilities:
 my $date = sprintf("%02d-%02d-%4d_%02d-%02d-%02d",$mday,$mon+1,$year+1900,$hour,$min,$sec);
 
 #create directory with the current date-time
-my $dirname = $rootfile."".$date;
-print "mkdir $dirname\n";
-system("mkdir $dirname");
+my $dirname = $fullpath."".$date;
+print "mkdir \"$dirname\"\n";
+system("mkdir \"$dirname\"");
 
 # start of permutation algorithm for creating all the possible scenarios from the parameters (above)
 my $tam = keys %parameters;
@@ -146,6 +148,8 @@ for (my $i=0; $i < @idx_scenarios; $i++) {
       close(INFILE);
       # now that the lines are saved, create a new file each time with the old contents
       #print "New file created: '$dirname/$newfile'\n";
+      #print "dir name: '$dirname'\n";
+      #print "newfile : '$newfile'\n";
       open(OUTFILE, ">$dirname/$newfile") or die ("Some error just happened. File: $dirname/$newfile\n");
       foreach my $line (@lines) {
          if ($line =~ /$keys[$j]/) {

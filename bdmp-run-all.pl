@@ -98,6 +98,7 @@ my $R_file_contents = "".
 my $count = 0;
 my $ss_cbind = "";
 foreach my $file (sort @files) {
+   next if ($file eq "scenarios.txt"); # skip the scenarios.txt file for obvious reasons (ie, it is not a model scenario)
    my $command = "perl bdmpathfinder.pl $path$folder/$file $propertyfile";
    print "\tRunning $path$folder/$file ...\n";
    system($command);

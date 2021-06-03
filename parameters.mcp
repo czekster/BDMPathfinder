@@ -1,9 +1,9 @@
 <?xml version= "1.0" encoding="UTF-8" ?>
 <AMC_ENTREES xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="mc_param.xsd" COPYRIGHT="Yams Copyright© EDF 2003-2013. All rights reserved." VERSION="2.0.3.1">
-	<FIGARO0>#\.\casestudy2-markings07-04-2021_22-02-10/casestudy2-markings32.fi</FIGARO0>
+	<FIGARO0>#\.\models_/casestudy2-markings03-06-2021_10-30-24/casestudy2-markings16.fi</FIGARO0>
 	<PARAMETRES MAX_NB_TOURS_REGLES="200" MAX_NB_TOURS_TPS_FIXE="10" MAX_NB_HISTOIRES="100000" MEM_ETATS="10000" OPTIM_INTERACTIONS="VRAI" GRAINE="0" RNG="yarn5" FREQ_TRANS="VRAI" PROBA_SEQ="100"/>
 	<HISTOIRE>
-		<INTERVALLE T0="0" T1="129600" N="10"/>
+		<INTERVALLE T0="0" T1="3600" N="10"/>
 	</HISTOIRE>
 	<GROUPES>
 		<GROUPE NOM="WITHOUT_NAME"/>

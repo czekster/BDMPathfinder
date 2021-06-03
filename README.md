@@ -27,6 +27,10 @@ You may use [Visual Figaro](https://sourceforge.net/projects/visualfigaro/) to o
 - Customisation of plotting axis (X,Y);
 
 ## Basic instructions
+The following instructions are for the case where you are creating a new model in RSMB and would like to use BDMPathfinder to create a nover analysis session.
+Please, look at the Section "Running the case study" below to learn how to use a pre-generated Figaro0 file and running BDMPathfinder for generating graphs in R.
+
+Here is the list of tasks:
 1. Create a BDMP model in RiskSpectrum ModelBuilder (RSMB)
    - open the properties and set option: ``GLOBAL_TYPE>OPTIONS>enable_detection`` to ``FALSE`` (this option is used when modelling only the attacks on BDMP instead of the Attack-Defense capabilities and extra parameters required in these kinds of analysis)
 2. For each leaf, assign a number that is unique to your analysis (e.g. 123.456)
@@ -69,11 +73,29 @@ TOP-PATHS       = 0             # discover top N paths ** if TOP-PATHS > 0, then
 VERBOSE         = 0             # shows output as they are computed
 ```
 
-## Example: casestudy1
+## Example: casestudy2-markings
+This case study runs the multiple scenario analysis (generating a folder with as many scenarios as set by the modeller).
 [Click here to open casestudy2-markings results](https://github.com/czekster/BDMPathfinder/blob/main/casestudy2-markings_results.png)
 
-## Case studies and examples
-[Click here for case studies and examples](case-studies.md)
+## Running the case study - reproduce the results!
+Before running this, install RStudio (latest version), and Perl.
+
+Steps to run the case study (the tool was tested in MS-Windows 10, but will run on GNU/Linux without any significant changes):
+1. Clone the repository at GitHub - (https://github.com/czekster/BDMPathfinder)[https://github.com/czekster/BDMPathfinder]
+2. Run the Command Line Interface (command.exe)
+3. Go to the folder where you clone the GitHub repository (mine is `C:\Users\stout\Desktop\BDMPathfinder-GitClone`)
+4. Edit the properties file to adjust to your configuration and parameters (file is `bdmp-properties.txt`, but you could create any other from this one and then pass it as argument to `bdmp-run-all.pl` script)
+   - Note: I used the property `DURATION=6` (eg, simulating six hours), for the actual figure, you should put `DURATION=96` here! *I stress that it will take several hours to complete.*
+5. Run the Perl script that iterates over the scenarios
+   - Command: `perl bdmp-scenario-builder.pl models_/casestudy2-markings.fi`
+   - Observe that the script created a folder in `models_` folder with the current timestamp (`models_/casestudy2-markings03-06-2021_09-52-13`)
+   - Inspect file `scenarios.txt` (inside that folder) for the list of scenarios the script has created, for each leaf (it took 25 min in my i7 16Gb RAM quadcore machine, for all 16 scenarios)
+6. Run the Perl script that runs YAMS as many scenarios that are present in the new folder, for the parameters set in the properties file `bdmp-properties.txt`
+   - Command: `perl bdmp-run-all.pl models_/casestudy2-markings03-06-2021_09-52-13 bdmp-properties.txt`
+7. Run RStudio, open file `models_/casestudy2-markings03-06-2021_09-52-13/script.R`
+   - Run the full script (eg, select all with CTRL-A, then hit ALT-RETURN) - it will generate the multi-scenario graph for six hour of simulation time (see note on step 4)
+
+And that's it, now you can analyse the path probabilities for BDMP models over time, for multiple parameters for the attack leaves!
 
 ## Corresponding author
 Ricardo M. Czekster -- rczekster at gmail com
