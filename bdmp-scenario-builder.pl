@@ -53,18 +53,18 @@ $rootfile = substr($rootfile, rindex($rootfile,"/")+1, length($rootfile)-rindex(
 
 my $SECONDS = 3600;  # total of seconds in one hour (main scale)
 
-my %parameters = (   # model in HOURS, e.g., for 777 there is two possibilities: 1 hour and 3 hours, and so on, e.g. "666"     => "1;3",
-   #"666"     => "1;3",
+my %parameters = (   # model in HOURS, e.g., for '123.458' there is two possibilities: 3 hours and 12 hours, and so on
+   #"777"     => "1;3",   # this one is shipped commented
    "123.456"     => "1",
    "123.457"     => "2",
    "123.458"     => "3;12",
    "123.459"     => "5;10",
-   #"123.460"     => "0.2;0.5",
+   #"123.460"     => "0.2;0.5",   # also commented, just to show that it is possible to avoid some scenarios altogether
    "123.461"     => "1",
    "123.462"     => "3",
    "123.463"     => "4;16",
    #"123.481"     => "1",
-   "123.464"     => "0.1;0.9",   # this one is the between 0 and 1
+   "123.464"     => "0.1;0.9",   # this one is the between 0 and 1 - GAMMA property
 );
 
 #current localtime
