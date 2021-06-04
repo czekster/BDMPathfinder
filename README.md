@@ -33,11 +33,11 @@ You may use [Visual Figaro](https://sourceforge.net/projects/visualfigaro/) to o
 - Multiple scenario analysis of BDMP models;
 - Advanced plotting using the R environment;
 - Top Path analysis, where modellers select only the ones having highest probabilities;
-- Iteration over multiple mission times set by the modeller (ie analysis over time as paths increase their likelihood);
+- Iteration over multiple mission times set by the modeller (ie, analysis over time as paths increase their likelihood);
 - Customisation of plotting axis (X,Y);
 
 ## Basic instructions
-The following instructions are for the case where you are creating a new model in RSMB and would like to use BDMPathfinder to create a nover analysis session.
+The following instructions are for the case where you are creating a new model in RSMB and would like to use BDMPathfinder to create a new analysis session.
 Please, look at the Section "Running the case study" below to learn how to use a pre-generated Figaro0 file and running BDMPathfinder for generating graphs in R.
 
 Here is the list of tasks:
@@ -76,7 +76,7 @@ Here is a list of steps performed by the tool for processing the Figaro0 file an
 
 
 ## Properties
-Set up a few properties in a properties file (you can choose the name and use it as parameter for 'bdmp-scenario-builder.pl' (use '#' to commenting lines).
+Set up a few properties in a properties file (you can choose the name and use it as parameter for ``bdmp-scenario-builder.pl`` (use '#' for commenting lines).
 The file below 'looks odd' just to show modellers the use of properties, and how lenient the parser will behave to extract actual (useful) parameters from this file.
 ```# use this for commenting lines
 WORKING-PATH    = C://temp//BDMPathfinder # **CHANGE HERE** - USE MS-Windows PATH style
@@ -107,8 +107,9 @@ Steps to run the case study (the tool was tested in MS-Windows 10 - RSMB is boun
 5. Run the Perl script that iterates over the scenarios
    - Command: `perl bdmp-scenario-builder.pl models_/casestudy2-markings.fi`
    - Observe that the script created a folder in `models_` folder with the current timestamp (`models_/casestudy2-markings03-06-2021_09-52-13`)
-   - Inspect file `scenarios.txt` (inside that folder) for the list of scenarios the script has created, for each leaf (it took 25 min in my i7 16Gb RAM quadcore machine, for all 16 scenarios)
+   - Inspect file `scenarios.txt` (inside that folder) for the list of scenarios the script has created, for each leaf
 6. Run the Perl script that runs YAMS as many scenarios that are present in the new folder, for the parameters set in the properties file `bdmp-properties.txt`
+   - Mind that it took approx. 25 min in an Intel(R) Core(TM) i7-7700HQ CPU @ 2.80GHz with 16Gb RAM for all 16 scenarios
    - Command: `perl bdmp-run-all.pl models_/casestudy2-markings03-06-2021_09-52-13 bdmp-properties.txt`
 7. Run RStudio, open file `models_/casestudy2-markings03-06-2021_09-52-13/script.R`
    - Run the full script (eg, select all with CTRL-A, then hit ALT-RETURN)
