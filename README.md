@@ -115,6 +115,7 @@ Steps to run the case study (the tool was tested in MS-Windows 10 - RSMB is boun
    - It will generate the multi-scenario graph for six hour of simulation time (see note on step 4)
 
 And that's it, now you can analyse the path probabilities for BDMP models over time, for multiple parameters for the attack leaves!
+Check the [Wiki page](https://github.com/czekster/BDMPathfinder/wiki) for a graph showing the results for the multi-scenario simulation.
 
 ## Funding
 
