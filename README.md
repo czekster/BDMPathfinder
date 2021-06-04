@@ -20,9 +20,9 @@ BDMPathfinder runs (and was extensively tested) on MS-Windows.
    - **You will have to download and install it**
 - [Yet Another Monte Carlo Simulator (YAMS)](https://sourceforge.net/projects/visualfigaro/files/YAMS/) version 2.0.3.1 (for MS-Windows).
    - YAMS is **free**, but _not open source_ (freely provided by *Electricité de France* - [EDF](https://www.edf.fr/en/meta-home))
-      - [SourceForge Link to download YAMS](https://sourceforge.net/projects/visualfigaro/files/YAMS/)
+      - Here is the [SourceForge link to download YAMS](https://sourceforge.net/projects/visualfigaro/files/YAMS/)
       - [Website to download VisualFigaro and example models](https://sourceforge.net/projects/visualfigaro/files/)
-      - [KB3 and tools at EDF's website](https://www.edf.fr/en/the-edf-group/inventing-the-future-of-energy/r-d-global-expertise/our-offers/simulation-softwares/kb3)
+      - You may also look at [KB3 and tools at EDF's website](https://www.edf.fr/en/the-edf-group/inventing-the-future-of-energy/r-d-global-expertise/our-offers/simulation-softwares/kb3)
    - **This tool is shipped with BDMPathfinder**
 - [RStudio](https://www.rstudio.com/products/rstudio/download/) version 1.4.1106 (multi-platform tool).
    - **You will have to download and install it**
