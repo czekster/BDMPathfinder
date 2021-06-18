@@ -2,7 +2,10 @@
 A tool for analysing attack paths in BDMP (Boolean logic Driven Markov Processes) models.
 Look also at the [Wiki page](https://github.com/czekster/BDMPathfinder/wiki) for latest news on the tool.
 
-The tool has been **accepted** at the [17th EDCC](http://edcc.dependability.org/) (2021) for presentation at the conference.
+The tool has been **accepted** at the [17th EDCC](http://edcc.dependability.org/) (2021) for presentation (details on publication at IEEE will follow).
+Title: **_"BDMPathfinder: a tool for exploring attack paths in models defined by Boolean logic Driven Markov Processes"_**
+Authors: Ricardo M. Czekster, Charles Morisset
+Newcastle University - School of Computing
 
 ## Disclaimer
 We stress the fact the BDMPathfinder tool is a **prototype** -- it has not being implemented with any kind of performance mindset.
