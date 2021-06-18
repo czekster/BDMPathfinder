@@ -96,7 +96,8 @@ VERBOSE         = 0             # shows output as they are computed
 
 ## Example: casestudy2-markings
 This case study runs the multiple scenario analysis (generating a folder with as many scenarios as set by the modeller).
-[Click here to open casestudy2-markings results](https://github.com/czekster/BDMPathfinder/blob/main/casestudy2-markings_results.png)
+[Click here to open casestudy2-markings results](https://github.com/czekster/BDMPathfinder/blob/main/casestudy2-markings_results.png).
+
 It is called _'markings'_ because the modeller uses numerical values in the RSMB model that will be substituted by parameters.
 
 ## Running the case study - reproduce the results!
